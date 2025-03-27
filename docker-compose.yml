@@ -1,49 +1,20 @@
-version: '3.8'
-
 services:
-  training:
+  backend:
     build: .
-    platform: linux/arm64  # Specify platform for M1/M2 Macs
     volumes:
       - ./models:/app/models
-      - ./data:/app/data
     environment:
-      - NUM_WORKERS=4
-      - BATCH_SIZE=512
-    healthcheck:
-      test: ["CMD", "python", "-c", "import torch; print(True)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-    command: python -m src.training
-
-  interface:
-    build: .
-    platform: linux/arm64
-    volumes:
-      - ./models:/app/models
+      - STOCKFISH_PATH=/usr/games/stockfish
     ports:
       - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-    command: python -m src.interface
 
-  tensorboard:
-    build: .
-    platform: linux/arm64
-    volumes:
-      - ./data:/app/data
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "6006:6006"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6006"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-    command: tensorboard --logdir=/app/data/tensorboard --host=0.0.0.0 
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend 

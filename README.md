@@ -1,104 +1,149 @@
-# Chess Engine with Neural Network
+# Chess Engine with Neural Networks
 
-This project implements a chess engine using a neural network trained through self-play. The engine is evaluated against Stockfish with configurable strength levels.
+A chess engine that uses neural networks trained through self-play to evaluate positions and make moves.
+
+## Features
+
+- Neural network-based position evaluation
+- Self-play training with MCTS (Monte Carlo Tree Search)
+- GUI interface for playing against the engine
+- ELO rating evaluation against Stockfish
+- PGN game saving and analysis
+- Docker support for easy deployment
+
+## Prerequisites
+
+- Python 3.9 or higher
+- Poetry for dependency management
+- Stockfish chess engine
+- Docker and Docker Compose (optional, for containerized deployment)
+
+## Installation
+
+### Local Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd chess-engine
+```
+
+2. Install Poetry if you haven't already:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+3. Install dependencies:
+```bash
+poetry install
+```
+
+4. Install Stockfish:
+- On macOS: `brew install stockfish`
+- On Ubuntu/Debian: `sudo apt-get install stockfish`
+- On Windows: Download from [Stockfish website](https://stockfishchess.org/download/)
+
+### Docker Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd chess-engine
+```
+
+2. Build the Docker image:
+```bash
+docker-compose build
+```
+
+## Usage
+
+### Local Usage
+
+1. Training the model:
+```bash
+poetry run python train.py
+```
+
+2. Playing against the model:
+```bash
+poetry run python test_model.py
+```
+
+3. Evaluating ELO rating:
+```bash
+poetry run python evaluate_elo.py --model content/models/checkpoint_10.pt --stockfish /path/to/stockfish --time 1.0 --games 10 --gui true
+```
+
+### Docker Usage
+
+1. Training the model:
+```bash
+docker-compose run --rm chess-engine poetry run python train.py
+```
+
+2. Playing against the model:
+```bash
+docker-compose run --rm chess-engine poetry run python test_model.py
+```
+
+3. Evaluating ELO rating:
+```bash
+docker-compose run --rm chess-engine poetry run python evaluate_elo.py --model content/models/checkpoint_10.pt --stockfish /usr/games/stockfish --time 1.0 --games 10 --gui true
+```
+
+4. Saving games as PGN:
+```bash
+docker-compose run --rm chess-engine poetry run python evaluate_elo.py --model content/models/checkpoint_10.pt --stockfish /usr/games/stockfish --time 1.0 --games 10 --save
+```
 
 ## Project Structure
 
 ```
-.
-├── models/                  # Directory for saved model checkpoints
-├── test_model.py           # GUI interface for playing against the model
-├── evaluate_model.py       # Script to evaluate model against Stockfish
-├── train_on_colab.ipynb    # Google Colab notebook for training
-└── README.md              # Project documentation
+chess-engine/
+├── data/                  # Training and evaluation data
+├── models/               # Saved model checkpoints
+├── evaluation_results/   # ELO evaluation results
+├── train.py             # Training script
+├── test_model.py        # GUI for playing against the model
+├── evaluate_elo.py      # ELO rating evaluation script
+├── gui.py              # GUI implementation
+├── pyproject.toml      # Poetry dependencies
+├── Dockerfile          # Docker configuration
+├── docker-compose.yml  # Docker Compose configuration
+└── .dockerignore      # Docker ignore rules
 ```
 
-## Installation
+## Docker Configuration
 
-1. Clone the repository
-2. Install required packages:
-```bash
-pip install torch numpy chess python-chess tqdm PyQt5
-```
-3. Install Stockfish:
-   - macOS: `brew install stockfish`
-   - Linux: `sudo apt-get install stockfish`
-   - Windows: Download from [Stockfish website](https://stockfishchess.org/download/)
+The project includes Docker support with the following services:
 
-## Usage
+- `chess-engine`: Main service for running the chess engine
+- `training`: Service for model training
+- `interface`: Web interface service (port 8000)
+- `tensorboard`: TensorBoard visualization service (port 6006)
 
-### Playing Against the Model
+### Docker Volumes
 
-To play against the model using the GUI interface:
+The following directories are mounted as volumes:
+- `./data`: Training and evaluation data
+- `./models`: Saved model checkpoints
+- `./evaluation_results`: ELO evaluation results
 
-```bash
-python test_model.py --model content/models/checkpoint_10.pt
-```
+### Environment Variables
 
-### Evaluating Model Strength
+- `PYTHONPATH`: Set to `/app` for proper module imports
+- `STOCKFISH_PATH`: Path to Stockfish executable in the container
+- `NUM_WORKERS`: Number of training workers (default: 4)
+- `BATCH_SIZE`: Training batch size (default: 512)
 
-To evaluate the model's strength against Stockfish:
+## Contributing
 
-```bash
-python evaluate_elo.py --model content/models/checkpoint_10.pt --stockfish /opt/homebrew/bin/stockfish --time 1.0 --games 10 --stockfish-elo 1500 --save
-```
-
-#### Command Line Arguments
-
-- `--model`: Path to the model checkpoint (required)
-- `--stockfish`: Path to Stockfish executable (required)
-- `--time`: Time control in seconds per move (default: 1.0)
-- `--games`: Number of games to play (default: 10)
-- `--stockfish-elo`: Stockfish ELO rating (100-3190, default: 3000)
-- `--gui`: Show GUI during evaluation
-- `--save`: Save games as PGN files
-
-#### Stockfish Strength Configuration
-
-The script supports two modes for configuring Stockfish's strength:
-
-1. **UCI_Elo Mode** (1320-3190 ELO):
-   - Used when `--stockfish-elo` is 1320 or higher
-   - Provides precise ELO-based strength limiting
-   - Example: `--stockfish-elo 1500`
-
-2. **Skill Level Mode** (100-1320 ELO):
-   - Used when `--stockfish-elo` is below 1320
-   - Maps ELO ratings to Stockfish's internal skill levels (0-20)
-   - Formula: `skill_level = (elo - 100) / 61`
-   - Example: `--stockfish-elo 500` will use Skill Level 6
-
-#### PGN File Saving
-
-When using the `--save` flag, games are saved in the following format:
-```
-data/eval_<date>_<modelname>_<stockfishelo>/game_<number>.pgn
-```
-
-Each PGN file includes:
-- Complete game moves
-- Game metadata (players, date, ELO ratings)
-- Final result
-
-## Model Architecture
-
-The neural network consists of:
-- Input layer: 13 channels (6 piece types × 2 colors + empty squares)
-- 3 convolutional layers (64, 128, 256 filters)
-- 2 fully connected layers (1024, 512 neurons)
-- Two output heads:
-  - Value head: Evaluates position
-  - Policy head: Predicts move probabilities
-
-## Training Process
-
-The model is trained through self-play with the following parameters:
-- Learning rate: 0.001
-- Batch size: 256
-- Number of games: 1000
-- Loss functions:
-  - Value loss: MSE
-  - Policy loss: Cross-entropy
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 

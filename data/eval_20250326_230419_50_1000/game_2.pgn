@@ -1,0 +1,13 @@
+[Event "Model vs Stockfish Evaluation"]
+[Site "Local Evaluation"]
+[Date "2025.03.26"]
+[Round "2"]
+[White "Stockfish"]
+[Black "Model"]
+[Result "1-0"]
+[Model_ELO "968"]
+[Stockfish_ELO "50"]
+[Stockfish_Strength "Skill Level 0"]
+
+1. d4 Nc6 2. d5 Rb8 3. Nc3 Nb4 4. Nf3 h5 5. e4 e6 6. Be3 Qe7 7. a3 Kd8 8. axb4 exd5 9. Nxd5 Qe6 10. Bd3 Qg6 11. O-O Qc6 12. c4 Qh6 13. c5 Qc6 14. h4 Qh6 15. b5 Qc6 16. Qa4 Qh6 17. e5 Qc6 18. Nf4 Ke7 19. Rfc1 Qh6 20. g3 Qc6 21. Qd1 Qh6 22. Nd5+ Ke6 23. Nxc7+ Ke7 24. Bg5+ Nf6 25. exf6+ gxf6 26. Nd5+ Ke6 27. Bxh6 Kxd5 28. Bf5# 1-0
+
