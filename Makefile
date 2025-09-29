@@ -12,39 +12,39 @@ build:
 
 # Test Phase 1 DQN implementation
 test-phase1:
-	docker-compose run --rm chess-dqn-training
+	docker-compose run --rm chess-rl
 
 # Start interactive container for development
 interactive:
-	docker-compose run --rm chess-dqn-interactive
+	docker-compose run --rm chess-rl /bin/bash
 
 # Start TensorBoard for monitoring
 tensorboard:
-	docker-compose up tensorboard
+	docker-compose run --rm chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
 
 # Start full training pipeline (when ready)
 train-dqn:
-	docker-compose run --rm chess-dqn-training python src/training/train_dqn.py
+	docker-compose run --rm chess-rl python src/training/train_dqn.py
 
 # ============ SERVER DEPLOYMENT ============
 # Commands optimized for A40 server deployment
 
 # Build and test on server
 server-setup:
-	docker-compose build
-	docker-compose run --rm chess-dqn-training
+	docker-compose -f docker-compose.yml -f docker-compose.server.yml build
+	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl
 
 # Run Phase 1 tests with GPU monitoring
 server-test:
-	docker-compose run --rm chess-dqn-training bash -c "nvidia-smi && python test_dqn_phase1.py"
+	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && python test_dqn_phase1.py"
 
 # Start interactive session on server
 server-interactive:
-	docker-compose run --rm chess-dqn-interactive bash -c "nvidia-smi && /bin/bash"
+	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Monitor GPU usage during training
 gpu-monitor:
-	docker-compose exec chess-dqn-training watch -n 1 nvidia-smi
+	docker exec birds-lmannini-e3da-3 watch -n 1 nvidia-smi
 
 # ============ GPU SELECTION ============
 # Use specific GPU (0-9)
@@ -52,21 +52,59 @@ gpu-monitor:
 # Test on specific GPU
 test-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make test-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-training python test_dqn_phase1.py
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python test_dqn_phase1.py
 
 # Interactive session on specific GPU
 interactive-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-interactive bash -c "nvidia-smi && /bin/bash"
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Training on specific GPU
 train-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-training python src/training/train_dqn.py
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python src/training/train_dqn.py
 
 # Check GPU status
 gpu-status:
 	nvidia-smi
+
+# ============ CONTAINER MANAGEMENT ============
+# Commands for managing the named container
+
+# Check if container is running
+container-status:
+	@docker ps -f name=birds-lmannini-e3da-3
+
+# Connect to running container
+container-connect:
+	docker exec -it birds-lmannini-e3da-3 /bin/bash
+
+# View container logs
+container-logs:
+	docker logs birds-lmannini-e3da-3
+
+# Stop the container
+container-stop:
+	docker stop birds-lmannini-e3da-3
+
+# Remove the container
+container-remove:
+	docker rm birds-lmannini-e3da-3
+
+# ============ CONTAINER SERVICES ============
+# Run different services in the single container
+
+# Start API server
+start-api:
+	docker-compose run --rm -p 8000:8000 chess-rl uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+# Start TensorBoard server  
+start-tensorboard:
+	docker-compose run --rm -p 6006:6006 chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
+
+# Start Jupyter notebook
+start-jupyter:
+	docker-compose run --rm -p 8888:8888 chess-rl jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
 
 # ============ LEGACY COMMANDS ============
 # Keep existing commands for backward compatibility
@@ -86,13 +124,13 @@ play-gui:
 evaluate-gui:
 	poetry run python evaluate_elo.py --model content/models/checkpoint_10.pt --stockfish /opt/homebrew/bin/stockfish --time 1.0 --games 10 --stockfish-elo 3000 --save --gui
 
-# API backend
+# API backend (legacy - now use start-api)
 backend:
-	docker-compose up backend
+	make start-api
 
-# Frontend + Backend
+# Web interface (requires separate frontend setup)
 web:
-	docker-compose up backend frontend
+	@echo "Use 'make start-api' for backend and setup frontend separately"
 
 # ============ UTILITIES ============
 # Create necessary directories
@@ -116,15 +154,29 @@ clean-docker:
 	docker-compose down --volumes --remove-orphans
 	docker system prune -f
 
+# ============ MAC DEVELOPMENT ============
+# Commands for Mac (without GPU)
+
+# Test on Mac (CPU only)
+test-mac:
+	docker-compose run --rm chess-rl python test_dqn_phase1.py
+
+# Interactive on Mac
+interactive-mac:
+	docker-compose run --rm chess-rl /bin/bash
+
+# Clean orphaned containers
+clean-orphans:
+	docker-compose down --remove-orphans
+
 # Help
 help:
 	@echo "Chess-RL Training Commands:"
 	@echo ""
-	@echo "🐳 DOCKER COMMANDS:"
+	@echo "🐳 MAIN COMMANDS:"
 	@echo "  make build          - Build Docker image"
 	@echo "  make test-phase1    - Test Phase 1 DQN implementation"
 	@echo "  make interactive    - Start interactive container"
-	@echo "  make tensorboard    - Start TensorBoard"
 	@echo "  make train-dqn      - Start DQN training"
 	@echo ""
 	@echo "🖥️  SERVER COMMANDS:"
@@ -137,6 +189,23 @@ help:
 	@echo "  make interactive-gpu GPU=2 - Interactive on specific GPU"
 	@echo "  make train-gpu GPU=0       - Train on specific GPU"
 	@echo "  make gpu-status            - Show GPU status"
+	@echo ""
+	@echo "🚀 SERVICES:"
+	@echo "  make start-api        - Start API server (port 8000)"
+	@echo "  make start-tensorboard - Start TensorBoard (port 6006)"
+	@echo "  make start-jupyter    - Start Jupyter notebook (port 8888)"
+	@echo ""
+	@echo "🐋 CONTAINER MANAGEMENT:"
+	@echo "  make container-status      - Check container status"
+	@echo "  make container-connect     - Connect to running container"
+	@echo "  make container-logs        - View container logs"
+	@echo "  make container-stop        - Stop container"
+	@echo "  make container-remove      - Remove container"
+	@echo ""
+	@echo "🍎 MAC DEVELOPMENT:"
+	@echo "  make test-mac       - Test on Mac (CPU only)"
+	@echo "  make interactive-mac - Interactive on Mac"
+	@echo "  make clean-orphans  - Clean orphaned containers"
 	@echo ""
 	@echo "🧹 UTILITIES:"
 	@echo "  make clean          - Clean Python cache"
