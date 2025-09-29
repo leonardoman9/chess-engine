@@ -1,12 +1,75 @@
 services:
+  chess-dqn-training:
+    build: .
+    runtime: nvidia  # Required for GPU access
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app
+      - TORCH_BACKENDS_CUDNN_BENCHMARK=true
+    volumes:
+      - ./models:/app/models
+      - ./checkpoints:/app/checkpoints
+      - ./logs:/app/logs
+      - ./results:/app/results
+      - ./data:/app/data
+    ports:
+      - "6006:6006"  # TensorBoard
+    command: python test_dqn_phase1.py
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  chess-dqn-interactive:
+    build: .
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app
+    volumes:
+      - ./models:/app/models
+      - ./checkpoints:/app/checkpoints
+      - ./logs:/app/logs
+      - ./results:/app/results
+      - ./data:/app/data
+    ports:
+      - "6006:6006"  # TensorBoard
+      - "8888:8888"  # Jupyter (optional)
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  tensorboard:
+    build: .
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "6006:6006"
+    command: tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
+
+  # Keep original backend for API testing
   backend:
     build: .
     volumes:
       - ./models:/app/models
     environment:
       - STOCKFISH_PATH=/usr/games/stockfish
+      - PYTHONPATH=/app
     ports:
       - "8000:8000"
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
 
   frontend:
     build: 
