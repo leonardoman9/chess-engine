@@ -46,6 +46,28 @@ server-interactive:
 gpu-monitor:
 	docker-compose exec chess-dqn-training watch -n 1 nvidia-smi
 
+# ============ GPU SELECTION ============
+# Use specific GPU (0-9)
+
+# Test on specific GPU
+test-gpu:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make test-gpu GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-training python test_dqn_phase1.py
+
+# Interactive session on specific GPU
+interactive-gpu:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-interactive bash -c "nvidia-smi && /bin/bash"
+
+# Training on specific GPU
+train-gpu:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose run --rm chess-dqn-training python src/training/train_dqn.py
+
+# Check GPU status
+gpu-status:
+	nvidia-smi
+
 # ============ LEGACY COMMANDS ============
 # Keep existing commands for backward compatibility
 
@@ -109,6 +131,12 @@ help:
 	@echo "  make server-setup   - Setup and test on server"
 	@echo "  make server-test    - Test with GPU monitoring"
 	@echo "  make server-interactive - Interactive session on server"
+	@echo ""
+	@echo "🎯 GPU SELECTION:"
+	@echo "  make test-gpu GPU=1        - Test on specific GPU"
+	@echo "  make interactive-gpu GPU=2 - Interactive on specific GPU"
+	@echo "  make train-gpu GPU=0       - Train on specific GPU"
+	@echo "  make gpu-status            - Show GPU status"
 	@echo ""
 	@echo "🧹 UTILITIES:"
 	@echo "  make clean          - Clean Python cache"

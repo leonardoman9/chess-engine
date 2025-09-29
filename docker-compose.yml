@@ -4,7 +4,7 @@ services:
     runtime: nvidia  # Required for GPU access
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
       - PYTHONPATH=/app
       - TORCH_BACKENDS_CUDNN_BENCHMARK=true
     volumes:
@@ -29,7 +29,7 @@ services:
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
       - PYTHONPATH=/app
     volumes:
       - ./models:/app/models

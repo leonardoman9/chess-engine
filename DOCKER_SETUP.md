@@ -58,6 +58,37 @@ make server-interactive
 make gpu-monitor
 ```
 
+### 🎯 **Selezione GPU Specifica**
+
+Sul server con multiple GPU, puoi specificare quale usare:
+
+```bash
+# Controlla GPU disponibili
+make gpu-status
+
+# Test su GPU specifica (esempio: GPU 1)
+make test-gpu GPU=1
+
+# Sessione interattiva su GPU 2  
+make interactive-gpu GPU=2
+
+# Training su GPU 0
+make train-gpu GPU=0
+
+# Metodo alternativo - variabile ambiente
+CUDA_VISIBLE_DEVICES=3 make test-phase1
+CUDA_VISIBLE_DEVICES=1,2 make train-dqn  # Multi-GPU
+```
+
+#### Esempi Pratici
+```bash
+# Server con 4 GPU (0,1,2,3)
+nvidia-smi                    # Vedi stato GPU
+make test-gpu GPU=2           # Usa solo GPU 2
+make interactive-gpu GPU=1    # Debug su GPU 1
+make train-gpu GPU=3          # Training su GPU 3
+```
+
 ## 📋 Struttura Docker Services
 
 ### `chess-dqn-training`
