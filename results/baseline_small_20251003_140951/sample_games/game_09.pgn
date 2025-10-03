@@ -1,0 +1,11 @@
+[Event "Sample Game"]
+[Site "Chess Engine Training"]
+[Date "2025.10.03"]
+[Round "9"]
+[White "Agent (Deterministic)"]
+[Black "Agent (Exploratory)"]
+[Result "1/2-1/2"]
+[Termination "timeout"]
+[Moves "50"]
+
+1. b3 d5 2. f3 c5 3. Bb2 h5 4. Ba3 c4 5. Kf2 h4 6. bxc4 { capture } 6... f5 7. Bc5 f4 8. Bd6 e6 9. Bc5 Nh6 10. Bb6 e5 11. Bc5 d4 12. Bb4 Bc5 13. g4 a6 14. Kg2 b5 15. Bxc5 { capture } 15... Rf8 16. Bb4 Qf6 17. Kf2 Qe6 18. e4 Qe7 19. Bc5 b4 20. Kg2 Kd8 21. Kh3 Qb7 22. a4 Qd5 23. Be7+ { check } 23... Ke8 24. Kxh4 { capture } 24... g5+ { check } 25. Bxg5 { capture } 25... Qf7 1/2-1/2

@@ -283,6 +283,42 @@ def main(cfg: DictConfig) -> None:
         except Exception as e:
             logger.error(f"❌ Final evaluation failed: {e}")
         
+        # Generate sample games
+        logger.info("🎮 Generating sample games...")
+        try:
+            sample_games_dir = results_dir / "sample_games"
+            sample_games_dir.mkdir(exist_ok=True)
+            
+            from src.utils.game_generator import generate_sample_games
+            sample_games = generate_sample_games(
+                agent=trainer.agent,
+                num_games=10,
+                save_dir=sample_games_dir,
+                max_moves=cfg.training.max_moves,
+                self_play=True  # Agent vs Agent (self-play)
+            )
+            
+            logger.info(f"✅ Generated {len(sample_games)} sample games in: {sample_games_dir}")
+            
+            # Log summary of sample games
+            total_moves = sum(game['moves'] for game in sample_games)
+            avg_moves = total_moves / len(sample_games) if sample_games else 0
+            
+            results_summary = {}
+            for game in sample_games:
+                result = game['result']
+                results_summary[result] = results_summary.get(result, 0) + 1
+            
+            logger.info("📊 Sample Games Summary:")
+            logger.info(f"  Average moves per game: {avg_moves:.1f}")
+            for result, count in results_summary.items():
+                logger.info(f"  {result}: {count} games")
+                
+        except Exception as e:
+            logger.error(f"❌ Sample games generation failed: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+        
         logger.info("🎉 All phases completed successfully!")
         
     except KeyboardInterrupt:

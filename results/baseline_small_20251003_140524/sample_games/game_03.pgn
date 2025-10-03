@@ -1,0 +1,11 @@
+[Event "Sample Game"]
+[Site "Chess Engine Training"]
+[Date "2025.10.03"]
+[Round "3"]
+[White "Agent"]
+[Black "Stockfish"]
+[Result "0-1"]
+[Termination "checkmate"]
+[Moves "28"]
+
+1. f3 e6 2. b4 Bxb4 { capture } 3. Bb2 Qg5 4. Bc3 Bc5 5. Bb2 Nc6 6. Be5 Nxe5 { capture } 7. c3 Ne7 8. Qa4 Nd5 9. Qxa7 { capture } 9... Rxa7 { capture } 10. e4 Nf4 11. g3 Bxg1 { capture } 12. Ba6 Nxf3+ { capture, check } 13. Kf1 Nxh2+ { capture, check } 14. Kxg1 { capture } 14... Qxg3# { capture, check } 0-1
