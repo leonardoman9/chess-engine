@@ -111,6 +111,67 @@ def save_experiment_config(cfg: DictConfig, save_path: Path):
     
     logger.info(f"Experiment configuration saved to {save_path / 'experiment_config.yaml'}")
 
+def save_experiment_info_legacy(cfg: DictConfig, save_path: Path):
+    """Save experiment info in legacy JSON format for compatibility"""
+    import json
+    
+    # Create legacy format experiment info
+    experiment_info = {
+        'experiment': {
+            'name': cfg.experiment.name,
+            'description': cfg.experiment.description,
+            'total_games': cfg.experiment.total_games,
+            'timestamp': datetime.now().isoformat()
+        },
+        'model_config': {
+            'conv_channels': list(cfg.model.conv_channels),
+            'hidden_size': cfg.model.hidden_size,
+            'dropout': cfg.model.dropout,
+            'activation': cfg.model.activation
+        },
+        'exploration_config': {
+            'strategy_type': cfg.exploration.strategy_type,
+            'epsilon_start': cfg.exploration.epsilon_start,
+            'epsilon_end': cfg.exploration.epsilon_end,
+            'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
+            'decay_type': cfg.exploration.decay_type
+        },
+        'agent_config': {
+            'buffer_size': cfg.agent.buffer_size,
+            'min_buffer_size': cfg.agent.min_buffer_size,
+            'batch_size': cfg.agent.batch_size,
+            'learning_rate': cfg.agent.learning_rate,
+            'gamma': cfg.agent.gamma,
+            'tau': cfg.agent.tau,
+            'replay_type': cfg.agent.replay_type
+        },
+        'training_config': {
+            'max_moves': cfg.training.max_moves,
+            'game_timeout': cfg.training.game_timeout,
+            'games_per_episode': cfg.training.games_per_episode,
+            'training_frequency': cfg.training.training_frequency,
+            'target_update_frequency': cfg.training.target_update_frequency,
+            'eval_frequency': cfg.training.eval_frequency,
+            'eval_games': cfg.training.eval_games,
+            'stockfish_depth': cfg.training.stockfish_depth,
+            'stockfish_time': cfg.training.stockfish_time,
+            'log_frequency': cfg.training.log_frequency,
+            'checkpoint_frequency': cfg.training.checkpoint_frequency
+        },
+        'system': {
+            'python_version': str(sys.version),
+            'pytorch_version': str(torch.__version__),
+            'cuda_available': bool(torch.cuda.is_available()),
+            'device': str(get_device(cfg.device))
+        }
+    }
+    
+    # Save as JSON
+    with open(save_path / 'experiment_info.json', 'w') as f:
+        json.dump(experiment_info, f, indent=2)
+    
+    logger.info(f"Legacy experiment info saved to {save_path / 'experiment_info.json'}")
+
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig) -> None:
@@ -172,18 +233,33 @@ def main(cfg: DictConfig) -> None:
         checkpoint_dir=str(results_dir / "checkpoints")
     )
     
-    # Save experiment configuration
+    # Save experiment configuration (both new and legacy formats)
     save_experiment_config(cfg, results_dir)
+    save_experiment_info_legacy(cfg, results_dir)
     
     # Training
     logger.info(f"Starting training: {cfg.experiment.description}")
     logger.info(f"Total games: {cfg.experiment.total_games}")
     logger.info(f"Results directory: {results_dir}")
-    
+
     try:
-        trainer.train(cfg.experiment.total_games)
-        logger.info("Training completed successfully!")
+        # Train with save_path to generate final_model.pt
+        final_model_path = results_dir / 'final_model.pt'
+        training_history = trainer.train(
+            total_games=cfg.experiment.total_games,
+            save_path=str(final_model_path)
+        )
         
+        # Save training history
+        training_history_path = results_dir / 'training_history.json'
+        with open(training_history_path, 'w') as f:
+            import json
+            json.dump(training_history, f, indent=2, default=str)
+        
+        logger.info("Training completed successfully!")
+        logger.info(f"Final model saved to: {final_model_path}")
+        logger.info(f"Training history saved to: {training_history_path}")
+
         # Final evaluation
         logger.info("Running final evaluation...")
         final_results = trainer.evaluate_against_stockfish(50)
