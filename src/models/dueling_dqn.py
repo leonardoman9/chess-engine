@@ -7,6 +7,23 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from dataclasses import dataclass
+from typing import List
+
+
+@dataclass
+class ModelConfig:
+    """Configuration for Dueling DQN model"""
+    input_channels: int = 13
+    conv_channels: List[int] = None
+    hidden_size: int = 512
+    action_size: int = 4672
+    dropout: float = 0.1
+    activation: str = "relu"
+    
+    def __post_init__(self):
+        if self.conv_channels is None:
+            self.conv_channels = [64, 128, 256]
 
 
 class DuelingDQN(nn.Module):
@@ -19,12 +36,13 @@ class DuelingDQN(nn.Module):
     - Final Q-values: Q(s,a) = V(s) + A(s,a) - mean(A(s,:))
     """
     
-    def __init__(self, input_channels=13, conv_channels=[64, 128, 256], 
+    def __init__(self, config: ModelConfig = None, input_channels=13, conv_channels=[64, 128, 256], 
                  hidden_size=512, action_size=4672):
         """
         Initialize Dueling DQN
         
         Args:
+            config: ModelConfig object (preferred)
             input_channels: Number of input channels (13 for chess: 12 pieces + metadata)
             conv_channels: List of channel sizes for conv layers
             hidden_size: Size of dense layers
@@ -32,14 +50,23 @@ class DuelingDQN(nn.Module):
         """
         super(DuelingDQN, self).__init__()
         
-        self.input_channels = input_channels
-        self.action_size = action_size
+        # Use config if provided, otherwise use individual parameters
+        if config is not None:
+            self.input_channels = config.input_channels
+            self.conv_channels = config.conv_channels
+            self.hidden_size = config.hidden_size
+            self.action_size = config.action_size
+        else:
+            self.input_channels = input_channels
+            self.conv_channels = conv_channels
+            self.hidden_size = hidden_size
+            self.action_size = action_size
         
         # Convolutional feature extraction layers
         self.conv_layers = nn.ModuleList()
-        in_channels = input_channels
+        in_channels = self.input_channels
         
-        for out_channels in conv_channels:
+        for out_channels in self.conv_channels:
             self.conv_layers.append(
                 nn.Sequential(
                     nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -50,27 +77,27 @@ class DuelingDQN(nn.Module):
             in_channels = out_channels
         
         # Calculate flattened size after conv layers (8x8 board)
-        self.flatten_size = conv_channels[-1] * 8 * 8
+        self.flatten_size = self.conv_channels[-1] * 8 * 8
         
         # Shared dense layer
         self.shared_dense = nn.Sequential(
-            nn.Linear(self.flatten_size, hidden_size),
+            nn.Linear(self.flatten_size, self.hidden_size),
             nn.ReLU(inplace=True),
             nn.Dropout(0.3)
         )
         
         # Value stream V(s) - outputs single value
         self.value_stream = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size // 2),
+            nn.Linear(self.hidden_size, self.hidden_size // 2),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_size // 2, 1)
+            nn.Linear(self.hidden_size // 2, 1)
         )
         
         # Advantage stream A(s,a) - outputs advantage for each action
         self.advantage_stream = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size // 2),
+            nn.Linear(self.hidden_size, self.hidden_size // 2),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_size // 2, action_size)
+            nn.Linear(self.hidden_size // 2, self.action_size)
         )
         
         # Initialize weights

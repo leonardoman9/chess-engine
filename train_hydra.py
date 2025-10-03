@@ -135,14 +135,23 @@ def main(cfg: DictConfig) -> None:
     # Create agent
     logger.info("Initializing DQN Agent...")
     agent = DQNAgent(
-        model_config=model_config,
+        model_config={
+            'conv_channels': cfg.model.conv_channels,
+            'hidden_size': cfg.model.hidden_size
+        },
         buffer_size=cfg.agent.buffer_size,
         min_buffer_size=cfg.agent.min_buffer_size,
         batch_size=cfg.agent.batch_size,
         learning_rate=cfg.agent.learning_rate,
         gamma=cfg.agent.gamma,
         tau=cfg.agent.tau,
-        exploration_config=exploration_config,
+        exploration_config={
+            'strategy_type': cfg.exploration.strategy_type,
+            'epsilon_start': cfg.exploration.epsilon_start,
+            'epsilon_end': cfg.exploration.epsilon_end,
+            'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
+            'decay_type': cfg.exploration.decay_type
+        },
         device=device
     )
     

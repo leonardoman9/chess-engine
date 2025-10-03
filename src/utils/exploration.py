@@ -7,6 +7,17 @@ import torch
 import numpy as np
 import math
 from typing import Union, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class ExplorationConfig:
+    """Configuration for exploration strategy"""
+    strategy_type: str = "linear"
+    epsilon_start: float = 1.0
+    epsilon_end: float = 0.05
+    epsilon_decay_steps: int = 1000000
+    decay_type: str = "linear"
 
 
 class EpsilonGreedyExploration:

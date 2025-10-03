@@ -13,12 +13,12 @@ device: auto  # auto, cpu, cuda, cuda:0, etc.
 debug: false
 verbose: true
 
-# Experiment tracking
-experiment:
-  name: ${experiment.name}
-  description: ${experiment.description}
-  tags: []
-  notes: ""
+# Experiment tracking will be set by experiment configs
+# experiment:
+#   name: will be set by experiment config
+#   description: will be set by experiment config
+#   tags: []
+#   notes: ""
 
 # Paths
 paths:
