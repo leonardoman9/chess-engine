@@ -8,59 +8,59 @@ install:
 # ============ DOCKER COMMANDS ============
 # Build Docker image
 build:
-	docker-compose build
+	docker compose build
 
 # Test Phase 1 DQN implementation
 test-phase1:
-	docker-compose run --rm chess-rl
+	docker compose run --rm chess-rl
 
 # Start interactive container for development
 interactive:
-	docker-compose run --rm chess-rl /bin/bash
+	docker compose run --rm chess-rl /bin/bash
 
 # Start TensorBoard for monitoring
 tensorboard:
-	docker-compose run --rm chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
+	docker compose run --rm chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
 
 # Test training setup
 test-training:
-	docker-compose run --rm chess-rl python test_training.py
+	docker compose run --rm chess-rl python test_training.py
 
 # Train DQN model (quick test)
 train-quick:
-	docker-compose run --rm chess-rl python train_dqn.py baseline_small
+	docker compose run --rm chess-rl python train_dqn.py baseline_small
 
 # Train DQN model (development)
 train-dev:
-	docker-compose run --rm chess-rl python train_dqn.py baseline_medium
+	docker compose run --rm chess-rl python train_dqn.py baseline_medium
 
 # Train DQN model (production)
 train-prod:
-	docker-compose run --rm chess-rl python train_dqn.py baseline_large
+	docker compose run --rm chess-rl python train_dqn.py baseline_large
 
 # List available experiments
 list-experiments:
-	docker-compose run --rm chess-rl python train_dqn.py --list-experiments
+	docker compose run --rm chess-rl python train_dqn.py --list-experiments
 
 # Legacy training command
 train-dqn:
-	docker-compose run --rm chess-rl python train_dqn.py baseline_medium
+	docker compose run --rm chess-rl python train_dqn.py baseline_medium
 
 # ============ SERVER DEPLOYMENT ============
 # Commands optimized for A40 server deployment
 
 # Build and test on server
 server-setup:
-	docker-compose -f docker-compose.yml -f docker-compose.server.yml build
-	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl
+	docker compose -f docker compose.yml -f docker compose.server.yml build
+	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl
 
 # Run Phase 1 tests with GPU monitoring
 server-test:
-	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && python test_dqn_phase1.py"
+	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && python test_dqn_phase1.py"
 
 # Start interactive session on server
 server-interactive:
-	docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
+	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Monitor GPU usage during training
 gpu-monitor:
@@ -72,22 +72,22 @@ gpu-monitor:
 # Test on specific GPU
 test-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make test-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python test_dqn_phase1.py
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python test_dqn_phase1.py
 
 # Interactive session on specific GPU
 interactive-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Training on specific GPU (quick)
 train-gpu-quick:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-quick GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
 
 # Training on specific GPU (server experiment)
 train-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
 
 # Check GPU status
 gpu-status:
@@ -121,15 +121,15 @@ container-remove:
 
 # Start API server
 start-api:
-	docker-compose run --rm -p 8000:8000 chess-rl uvicorn api.main:app --host 0.0.0.0 --port 8000
+	docker compose run --rm -p 8000:8000 chess-rl uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 # Start TensorBoard server  
 start-tensorboard:
-	docker-compose run --rm -p 6006:6006 chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
+	docker compose run --rm -p 6006:6006 chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
 
 # Start Jupyter notebook
 start-jupyter:
-	docker-compose run --rm -p 8888:8888 chess-rl jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+	docker compose run --rm -p 8888:8888 chess-rl jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
 
 # ============ LEGACY COMMANDS ============
 # Keep existing commands for backward compatibility
@@ -176,7 +176,7 @@ clean:
 
 # Clean Docker
 clean-docker:
-	docker-compose down --volumes --remove-orphans
+	docker compose down --volumes --remove-orphans
 	docker system prune -f
 
 # ============ MAC DEVELOPMENT ============
@@ -184,39 +184,39 @@ clean-docker:
 
 # Test on Mac (CPU only)
 test-mac:
-	docker-compose run --rm chess-rl python test_dqn_phase1.py
+	docker compose run --rm chess-rl python test_dqn_phase1.py
 
 # Interactive on Mac
 interactive-mac:
-	docker-compose run --rm chess-rl /bin/bash
+	docker compose run --rm chess-rl /bin/bash
 
 # Clean orphaned containers
 clean-orphans:
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans
 
 # Analyze game quality
 analyze-games:
-	docker-compose run --rm chess-rl python analyze_games.py --games 5
+	docker compose run --rm chess-rl python analyze_games.py --games 5
 
 # Analyze with checkpoint
 analyze-checkpoint:
 	@if [ -z "$(CHECKPOINT)" ]; then echo "Usage: make analyze-checkpoint CHECKPOINT=path/to/checkpoint.pt"; exit 1; fi
-	docker-compose run --rm chess-rl python analyze_games.py --games 5 --load-checkpoint $(CHECKPOINT)
+	docker compose run --rm chess-rl python analyze_games.py --games 5 --load-checkpoint $(CHECKPOINT)
 
 # Analyze training results
 analyze-training:
 	@if [ -z "$(RESULTS)" ]; then echo "Usage: make analyze-training RESULTS=results/experiment_dir"; exit 1; fi
-	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS)
+	docker compose run --rm chess-rl python analyze_training.py $(RESULTS)
 
 # Generate training plots
 training-plots:
 	@if [ -z "$(RESULTS)" ]; then echo "Usage: make training-plots RESULTS=results/experiment_dir"; exit 1; fi
-	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS) --plots
+	docker compose run --rm chess-rl python analyze_training.py $(RESULTS) --plots
 
 # Generate sample games from checkpoint
 sample-games:
 	@if [ -z "$(RESULTS)" ]; then echo "Usage: make sample-games RESULTS=results/experiment_dir [CHECKPOINT=checkpoint.pt]"; exit 1; fi
-	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS) --generate-games $(if $(CHECKPOINT),--checkpoint $(CHECKPOINT),)
+	docker compose run --rm chess-rl python analyze_training.py $(RESULTS) --generate-games $(if $(CHECKPOINT),--checkpoint $(CHECKPOINT),)
 
 # Help
 help:
