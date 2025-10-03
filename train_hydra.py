@@ -145,6 +145,7 @@ def main(cfg: DictConfig) -> None:
         learning_rate=cfg.agent.learning_rate,
         gamma=cfg.agent.gamma,
         tau=cfg.agent.tau,
+        buffer_type=cfg.agent.replay_type,  # Map replay_type to buffer_type
         exploration_config={
             'strategy_type': cfg.exploration.strategy_type,
             'epsilon_start': cfg.exploration.epsilon_start,
@@ -166,9 +167,9 @@ def main(cfg: DictConfig) -> None:
     trainer = SelfPlayTrainer(
         agent=agent,
         config=training_config,
-        results_dir=str(results_dir),
-        experiment_name=cfg.experiment.name,
-        stockfish_path=os.getenv('STOCKFISH_PATH', '/usr/games/stockfish')
+        stockfish_path=os.getenv('STOCKFISH_PATH', '/usr/games/stockfish'),
+        log_dir=str(results_dir / "logs"),
+        checkpoint_dir=str(results_dir / "checkpoints")
     )
     
     # Save experiment configuration
