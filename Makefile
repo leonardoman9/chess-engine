@@ -51,16 +51,16 @@ train-dqn:
 
 # Build and test on server
 server-setup:
-	docker compose -f docker compose.yml -f docker compose.server.yml build
-	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl
+	docker compose -f docker-compose.yml -f docker-compose.server.yml build
+	docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl
 
 # Run Phase 1 tests with GPU monitoring
 server-test:
-	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && python test_dqn_phase1.py"
+	docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && python test_dqn_phase1.py"
 
 # Start interactive session on server
 server-interactive:
-	docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
+	docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Monitor GPU usage during training
 gpu-monitor:
@@ -72,22 +72,22 @@ gpu-monitor:
 # Test on specific GPU
 test-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make test-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python test_dqn_phase1.py
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python test_dqn_phase1.py
 
 # Interactive session on specific GPU
 interactive-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
 # Training on specific GPU (quick)
 train-gpu-quick:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-quick GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
 
 # Training on specific GPU (server experiment)
 train-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker compose.yml -f docker compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
 
 # Check GPU status
 gpu-status:
