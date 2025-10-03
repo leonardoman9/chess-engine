@@ -96,11 +96,11 @@ def save_experiment_config(cfg: DictConfig, save_path: Path):
     """Save experiment configuration to file"""
     config_dict = OmegaConf.to_container(cfg, resolve=True)
     
-    # Add system information
+    # Add system information (convert all to strings to avoid serialization issues)
     config_dict['system'] = {
-        'python_version': sys.version,
-        'pytorch_version': torch.__version__,
-        'cuda_available': torch.cuda.is_available(),
+        'python_version': str(sys.version),
+        'pytorch_version': str(torch.__version__),
+        'cuda_available': bool(torch.cuda.is_available()),
         'device': str(get_device(cfg.device)),
         'timestamp': datetime.now().isoformat()
     }
@@ -198,8 +198,6 @@ def main(cfg: DictConfig) -> None:
     except Exception as e:
         logger.error(f"Training failed: {e}")
         raise
-    finally:
-        trainer.cleanup()
 
 
 if __name__ == "__main__":
