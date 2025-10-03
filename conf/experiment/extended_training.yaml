@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: extended_training
+  description: "Extended training for server A40 - 10000 games"
+  total_games: 10000
+  
+defaults:
+  - override /model: large
+  - override /training: server
+  - override /exploration: conservative
+  - override /agent: large
