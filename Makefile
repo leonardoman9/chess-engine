@@ -118,8 +118,8 @@ train-hydra-custom:
 
 # Train with Hydra on GPU
 train-hydra-gpu:
-	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu GPU=0 [EXP=baseline_small]"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu GPU=0 [EXP=baseline_small] [PARAMS='...']"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0 $(PARAMS)
 
 # Hydra multirun (parameter sweep)
 train-hydra-sweep:
