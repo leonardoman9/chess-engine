@@ -244,35 +244,53 @@ def main(cfg: DictConfig) -> None:
 
     try:
         # Train with save_path to generate final_model.pt
+        logger.info("🚀 Starting training phase...")
         final_model_path = results_dir / 'final_model.pt'
         training_history = trainer.train(
             total_games=cfg.experiment.total_games,
             save_path=str(final_model_path)
         )
         
+        logger.info("✅ Training phase completed!")
+        logger.info("💾 Starting file saving phase...")
+        
         # Save training history
-        training_history_path = results_dir / 'training_history.json'
-        with open(training_history_path, 'w') as f:
-            import json
-            json.dump(training_history, f, indent=2, default=str)
+        try:
+            training_history_path = results_dir / 'training_history.json'
+            with open(training_history_path, 'w') as f:
+                import json
+                json.dump(training_history, f, indent=2, default=str)
+            logger.info(f"✅ Training history saved to: {training_history_path}")
+        except Exception as e:
+            logger.error(f"❌ Failed to save training history: {e}")
         
-        logger.info("Training completed successfully!")
-        logger.info(f"Final model saved to: {final_model_path}")
-        logger.info(f"Training history saved to: {training_history_path}")
-
+        # Verify final model was saved
+        if final_model_path.exists():
+            logger.info(f"✅ Final model confirmed at: {final_model_path}")
+        else:
+            logger.error(f"❌ Final model NOT found at: {final_model_path}")
+        
+        logger.info("🎯 Starting final evaluation phase...")
+        
         # Final evaluation
-        logger.info("Running final evaluation...")
-        final_results = trainer.evaluate_against_stockfish(50)
+        try:
+            final_results = trainer.evaluate_against_stockfish(50)
+            
+            logger.info("🏆 Final Results:")
+            logger.info(f"  Win Rate: {final_results['win_rate']:.1%}")
+            logger.info(f"  Draw Rate: {final_results['draw_rate']:.1%}")
+            logger.info(f"  Loss Rate: {final_results['loss_rate']:.1%}")
+        except Exception as e:
+            logger.error(f"❌ Final evaluation failed: {e}")
         
-        logger.info("Final Results:")
-        logger.info(f"  Win Rate: {final_results['win_rate']:.1%}")
-        logger.info(f"  Draw Rate: {final_results['draw_rate']:.1%}")
-        logger.info(f"  Loss Rate: {final_results['loss_rate']:.1%}")
+        logger.info("🎉 All phases completed successfully!")
         
     except KeyboardInterrupt:
-        logger.info("Training interrupted by user")
+        logger.info("⚠️ Training interrupted by user")
     except Exception as e:
-        logger.error(f"Training failed: {e}")
+        logger.error(f"💥 Training failed: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise
 
 
