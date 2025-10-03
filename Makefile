@@ -79,25 +79,25 @@ interactive-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
 	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
-# Training on specific GPU (quick)
+# Training on specific GPU (quick) - UPDATED TO USE HYDRA
 train-gpu-quick:
-	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-quick GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-quick GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_small device=cuda:0 experiment.total_games=100
 
-# Training on specific GPU (server experiment)
+# Training on specific GPU (server experiment) - UPDATED TO USE HYDRA
 train-gpu:
-	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=server_intensive device=cuda:0
 
-# Training 1000 games on GPU
+# Training 1000 games on GPU - UPDATED TO USE HYDRA
 train-gpu-1000:
-	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-1000 GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py custom_1000
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-1000 GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_medium device=cuda:0 experiment.total_games=1000
 
-# Training 5000 games on GPU
+# Training 5000 games on GPU - UPDATED TO USE HYDRA
 train-gpu-5000:
-	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-5000 GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py custom_5000
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-5000 GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_large device=cuda:0 experiment.total_games=5000
 
 # ============ HYDRA TRAINING ============
 # Hydra-powered training with flexible configuration
@@ -121,13 +121,44 @@ train-hydra-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu GPU=0 [EXP=baseline_small] [PARAMS='...']"; exit 1; fi
 	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0 $(PARAMS)
 
+# Train specific experiments on GPU
+train-hydra-gpu-small:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu-small GPU=0 [GAMES=100]"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_small device=cuda:0 $(if $(GAMES),experiment.total_games=$(GAMES),)
+
+train-hydra-gpu-medium:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu-medium GPU=0 [GAMES=500]"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_medium device=cuda:0 $(if $(GAMES),experiment.total_games=$(GAMES),)
+
+train-hydra-gpu-large:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu-large GPU=0 [GAMES=1000]"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=baseline_large device=cuda:0 $(if $(GAMES),experiment.total_games=$(GAMES),)
+
+train-hydra-gpu-extended:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu-extended GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=extended_training device=cuda:0
+
+train-hydra-gpu-server:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu-server GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py experiment=server_intensive device=cuda:0
+
 # Hydra multirun (parameter sweep)
 train-hydra-sweep:
 	docker compose run --rm chess-rl python train_hydra.py --multirun experiment=baseline_small,baseline_medium model=small,medium
 
+# Hydra multirun on GPU
+train-hydra-sweep-gpu:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-sweep-gpu GPU=0"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py --multirun experiment=baseline_small,baseline_medium model=small,medium device=cuda:0
+
 # List available Hydra configurations
 list-hydra-configs:
 	docker compose run --rm chess-rl python train_hydra.py --help
+
+# Test all GPU configurations
+test-all-gpu-configs:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make test-all-gpu-configs GPU=0"; exit 1; fi
+	python test_gpu_configs.py
 
 # Check GPU status
 gpu-status:
@@ -301,7 +332,14 @@ help:
 	@echo "  make train-hydra-exp EXP=baseline_small - Train specific experiment"
 	@echo "  make train-hydra-custom PARAMS='...' - Train with custom parameters"
 	@echo "  make train-hydra-gpu GPU=0 [EXP=...] - Train with Hydra on GPU"
-	@echo "  make train-hydra-sweep - Parameter sweep"
+	@echo "  make train-hydra-gpu-small GPU=0 [GAMES=100] - Train small model on GPU"
+	@echo "  make train-hydra-gpu-medium GPU=0 [GAMES=500] - Train medium model on GPU"
+	@echo "  make train-hydra-gpu-large GPU=0 [GAMES=1000] - Train large model on GPU"
+	@echo "  make train-hydra-gpu-extended GPU=0 - Extended training on GPU"
+	@echo "  make train-hydra-gpu-server GPU=0 - Server intensive training on GPU"
+	@echo "  make train-hydra-sweep - Parameter sweep (CPU)"
+	@echo "  make train-hydra-sweep-gpu GPU=0 - Parameter sweep on GPU"
+	@echo "  make test-all-gpu-configs GPU=0 - Test all GPU configurations"
 	@echo "  make list-hydra-configs - List Hydra configurations"
 	@echo ""
 	@echo "🖥️  SERVER COMMANDS:"
