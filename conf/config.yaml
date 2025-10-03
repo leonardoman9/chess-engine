@@ -1,0 +1,38 @@
+# Main Hydra configuration
+defaults:
+  - model: medium
+  - training: development
+  - exploration: balanced
+  - agent: default
+  - experiment: baseline_medium
+  - _self_
+
+# Global settings
+seed: 42
+device: auto  # auto, cpu, cuda, cuda:0, etc.
+debug: false
+verbose: true
+
+# Experiment tracking
+experiment:
+  name: ${experiment.name}
+  description: ${experiment.description}
+  tags: []
+  notes: ""
+
+# Paths
+paths:
+  results_dir: results
+  checkpoints_dir: checkpoints
+  logs_dir: logs
+  data_dir: data
+
+# Hydra configuration
+hydra:
+  run:
+    dir: results/${experiment.name}_${now:%Y%m%d_%H%M%S}
+  sweep:
+    dir: multirun/${now:%Y%m%d_%H%M%S}
+    subdir: ${hydra:job.num}
+  job:
+    chdir: true

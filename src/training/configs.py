@@ -182,6 +182,40 @@ EXPERIMENTS = {
             'tau': 0.001
         },
         total_games=10000
+    ),
+    
+    'custom_1000': ExperimentConfig(
+        name='custom_1000',
+        description='Custom training with 1000 games',
+        model_config=MODEL_CONFIGS['medium'],
+        exploration_config=EXPLORATION_CONFIGS['balanced'],
+        training_config=TRAINING_CONFIGS['development'],
+        agent_config={
+            'buffer_size': 10000,
+            'min_buffer_size': 1000,
+            'batch_size': 64,
+            'learning_rate': 1e-4,
+            'gamma': 0.99,
+            'tau': 0.005
+        },
+        total_games=1000
+    ),
+    
+    'custom_5000': ExperimentConfig(
+        name='custom_5000',
+        description='Custom training with 5000 games',
+        model_config=MODEL_CONFIGS['large'],
+        exploration_config=EXPLORATION_CONFIGS['balanced'],
+        training_config=TRAINING_CONFIGS['production'],
+        agent_config={
+            'buffer_size': 50000,
+            'min_buffer_size': 5000,
+            'batch_size': 128,
+            'learning_rate': 5e-5,
+            'gamma': 0.99,
+            'tau': 0.002
+        },
+        total_games=5000
     )
 }
 

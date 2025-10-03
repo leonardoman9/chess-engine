@@ -1,0 +1,7 @@
+# @package _global_
+model:
+  name: large
+  conv_channels: [128, 256, 512]
+  hidden_size: 1024
+  dropout: 0.1
+  activation: relu

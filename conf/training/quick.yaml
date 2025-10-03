@@ -1,0 +1,14 @@
+# @package _global_
+training:
+  name: quick
+  max_moves: 50
+  game_timeout: 10.0
+  games_per_episode: 5
+  training_frequency: 2
+  target_update_frequency: 20
+  eval_frequency: 10
+  eval_games: 3
+  stockfish_depth: 1
+  stockfish_time: 0.05
+  log_frequency: 5
+  checkpoint_frequency: 20

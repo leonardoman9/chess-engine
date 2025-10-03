@@ -35,9 +35,11 @@ COPY models/ models/
 COPY test_dqn_phase1.py .
 COPY test_training.py .
 COPY train_dqn.py .
+COPY train_hydra.py .
 COPY analyze_games.py .
 COPY analyze_training.py .
 COPY tasklist.md .
+COPY conf/ conf/
 
 # Create directories for training artifacts
 RUN mkdir -p logs checkpoints results data/training

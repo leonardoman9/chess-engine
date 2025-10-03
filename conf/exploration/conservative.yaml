@@ -1,0 +1,8 @@
+# @package _global_
+exploration:
+  name: conservative
+  strategy_type: exponential
+  epsilon_start: 0.8
+  epsilon_end: 0.1
+  epsilon_decay_steps: 2000000
+  decay_type: exponential

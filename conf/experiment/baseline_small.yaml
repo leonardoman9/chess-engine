@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: baseline_small
+  description: "Baseline CNN-DQN with small model for quick testing"
+  total_games: 100
+  
+defaults:
+  - override /model: small
+  - override /training: quick
+  - override /exploration: balanced
+  - override /agent: small

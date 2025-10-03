@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: baseline_medium
+  description: "Baseline CNN-DQN with medium model for development"
+  total_games: 500
+  
+defaults:
+  - override /model: medium
+  - override /training: development
+  - override /exploration: balanced
+  - override /agent: default

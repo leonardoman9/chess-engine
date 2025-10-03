@@ -89,6 +89,46 @@ train-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
 	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
 
+# Training 1000 games on GPU
+train-gpu-1000:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-1000 GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py custom_1000
+
+# Training 5000 games on GPU
+train-gpu-5000:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-5000 GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py custom_5000
+
+# ============ HYDRA TRAINING ============
+# Hydra-powered training with flexible configuration
+
+# Train with Hydra (default config)
+train-hydra:
+	docker compose run --rm chess-rl python train_hydra.py
+
+# Train with specific experiment
+train-hydra-exp:
+	@if [ -z "$(EXP)" ]; then echo "Usage: make train-hydra-exp EXP=baseline_small"; exit 1; fi
+	docker compose run --rm chess-rl python train_hydra.py experiment=$(EXP)
+
+# Train with custom parameters
+train-hydra-custom:
+	@if [ -z "$(PARAMS)" ]; then echo "Usage: make train-hydra-custom PARAMS='experiment.total_games=1000 model=large'"; exit 1; fi
+	docker compose run --rm chess-rl python train_hydra.py $(PARAMS)
+
+# Train with Hydra on GPU
+train-hydra-gpu:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu GPU=0 [EXP=baseline_small]"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0
+
+# Hydra multirun (parameter sweep)
+train-hydra-sweep:
+	docker compose run --rm chess-rl python train_hydra.py --multirun experiment=baseline_small,baseline_medium model=small,medium
+
+# List available Hydra configurations
+list-hydra-configs:
+	docker compose run --rm chess-rl python train_hydra.py --help
+
 # Check GPU status
 gpu-status:
 	nvidia-smi
@@ -233,6 +273,14 @@ help:
 	@echo "  make train-quick    - Quick training test (100 games)"
 	@echo "  make train-dev      - Development training (500 games)"
 	@echo "  make train-prod     - Production training (2000 games)"
+	@echo ""
+	@echo "🔧 HYDRA TRAINING:"
+	@echo "  make train-hydra    - Train with Hydra (default config)"
+	@echo "  make train-hydra-exp EXP=baseline_small - Train specific experiment"
+	@echo "  make train-hydra-custom PARAMS='...' - Train with custom parameters"
+	@echo "  make train-hydra-gpu GPU=0 [EXP=...] - Train with Hydra on GPU"
+	@echo "  make train-hydra-sweep - Parameter sweep"
+	@echo "  make list-hydra-configs - List Hydra configurations"
 	@echo ""
 	@echo "🖥️  SERVER COMMANDS:"
 	@echo "  make server-setup   - Setup and test on server"

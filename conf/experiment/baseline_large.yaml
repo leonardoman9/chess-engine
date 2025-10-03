@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: baseline_large
+  description: "Baseline CNN-DQN with large model for production"
+  total_games: 2000
+  
+defaults:
+  - override /model: large
+  - override /training: production
+  - override /exploration: conservative
+  - override /agent: large
