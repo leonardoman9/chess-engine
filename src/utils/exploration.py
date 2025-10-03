@@ -289,14 +289,17 @@ def create_exploration_strategy(strategy_type: str = 'linear', **kwargs) -> Epsi
     Returns:
         Exploration strategy instance
     """
+    # Remove decay_type from kwargs if present to avoid duplication
+    kwargs_clean = {k: v for k, v in kwargs.items() if k != 'decay_type'}
+    
     if strategy_type == 'linear':
-        return EpsilonGreedyExploration(decay_type='linear', **kwargs)
+        return EpsilonGreedyExploration(decay_type='linear', **kwargs_clean)
     elif strategy_type == 'exponential':
-        return EpsilonGreedyExploration(decay_type='exponential', **kwargs)
+        return EpsilonGreedyExploration(decay_type='exponential', **kwargs_clean)
     elif strategy_type == 'cosine':
-        return EpsilonGreedyExploration(decay_type='cosine', **kwargs)
+        return EpsilonGreedyExploration(decay_type='cosine', **kwargs_clean)
     elif strategy_type == 'adaptive':
-        return AdaptiveEpsilonGreedy(**kwargs)
+        return AdaptiveEpsilonGreedy(**kwargs_clean)
     else:
         raise ValueError(f"Unknown exploration strategy: {strategy_type}")
 
