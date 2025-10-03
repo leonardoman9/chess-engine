@@ -1,0 +1,3 @@
+Model: checkpoint_game_80
+Quick ELO Estimate: 133
+Evaluation Date: 2025-10-03T13:03:09.045506

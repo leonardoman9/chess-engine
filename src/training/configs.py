@@ -188,7 +188,7 @@ EXPERIMENTS = {
         name='custom_1000',
         description='Custom training with 1000 games',
         model_config=MODEL_CONFIGS['medium'],
-        exploration_config=EXPLORATION_CONFIGS['balanced'],
+        exploration_config=EXPLORATION_CONFIGS['standard'],
         training_config=TRAINING_CONFIGS['development'],
         agent_config={
             'buffer_size': 10000,
@@ -205,7 +205,7 @@ EXPERIMENTS = {
         name='custom_5000',
         description='Custom training with 5000 games',
         model_config=MODEL_CONFIGS['large'],
-        exploration_config=EXPLORATION_CONFIGS['balanced'],
+        exploration_config=EXPLORATION_CONFIGS['standard'],
         training_config=TRAINING_CONFIGS['production'],
         agent_config={
             'buffer_size': 50000,

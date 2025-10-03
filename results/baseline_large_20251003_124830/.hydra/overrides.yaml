@@ -1,0 +1,3 @@
+- experiment=baseline_large
+- device=cuda:0
+- experiment.total_games=50

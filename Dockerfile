@@ -38,6 +38,7 @@ COPY train_dqn.py .
 COPY train_hydra.py .
 COPY analyze_games.py .
 COPY analyze_training.py .
+COPY evaluate_elo.py .
 COPY tasklist.md .
 COPY conf/ conf/
 

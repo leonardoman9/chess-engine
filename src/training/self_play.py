@@ -14,6 +14,7 @@ from pathlib import Path
 
 from ..agents.dqn_agent import DQNAgent
 from ..utils.action_utils import board_to_tensor, action_to_move, move_to_action
+from ..utils.elo_calculator import ELOCalculator, full_elo_evaluation, quick_elo_estimate
 
 
 @dataclass
@@ -392,10 +393,37 @@ class SelfPlayTrainer:
             self.agent.save_checkpoint(save_path)
             self.logger.info(f"Final model saved: {save_path}")
         
-        # Final evaluation
+        # Final evaluation with ELO calculation
         self.logger.info("Running final evaluation...")
         final_eval = self.evaluate_against_stockfish(50)  # More games for final eval
         history['final_evaluation'] = final_eval
+        
+        # Comprehensive ELO evaluation
+        self.logger.info("🎯 Running comprehensive ELO evaluation...")
+        try:
+            elo_evaluation = full_elo_evaluation(
+                self.agent, 
+                save_dir=Path(save_path).parent if save_path else Path.cwd(),
+                stockfish_path=self.stockfish_path
+            )
+            history['elo_evaluation'] = {
+                'estimated_elo': elo_evaluation.estimated_elo,
+                'confidence_interval': elo_evaluation.confidence_interval,
+                'total_games': elo_evaluation.total_games,
+                'overall_score': elo_evaluation.overall_score
+            }
+            self.logger.info(f"🏆 Final ELO Rating: {elo_evaluation.estimated_elo} "
+                           f"(95% CI: {elo_evaluation.confidence_interval[0]}-{elo_evaluation.confidence_interval[1]})")
+        except Exception as e:
+            self.logger.error(f"ELO evaluation failed: {e}")
+            # Quick estimate as fallback
+            try:
+                quick_elo = quick_elo_estimate(self.agent, self.stockfish_path)
+                history['elo_evaluation'] = {'estimated_elo': quick_elo, 'method': 'quick_estimate'}
+                self.logger.info(f"🏆 Quick ELO Estimate: {quick_elo}")
+            except Exception as e2:
+                self.logger.error(f"Quick ELO estimate also failed: {e2}")
+                history['elo_evaluation'] = {'estimated_elo': 'unknown', 'error': str(e2)}
         
         self.logger.info(
             f"Final Evaluation - Win: {final_eval['win_rate']:.3f}, "

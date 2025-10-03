@@ -258,6 +258,28 @@ sample-games:
 	@if [ -z "$(RESULTS)" ]; then echo "Usage: make sample-games RESULTS=results/experiment_dir [CHECKPOINT=checkpoint.pt]"; exit 1; fi
 	docker compose run --rm chess-rl python analyze_training.py $(RESULTS) --generate-games $(if $(CHECKPOINT),--checkpoint $(CHECKPOINT),)
 
+# ============ ELO EVALUATION COMMANDS ============
+# Evaluate ELO rating against multiple Stockfish levels
+
+# Quick ELO evaluation (fewer games, faster)
+evaluate-elo-quick:
+	@if [ -z "$(CHECKPOINT)" ]; then echo "Usage: make evaluate-elo-quick CHECKPOINT=checkpoints/latest.pt"; exit 1; fi
+	docker compose run --rm chess-rl python evaluate_elo.py $(CHECKPOINT) --quick
+
+# Full ELO evaluation (comprehensive testing)
+evaluate-elo-full:
+	@if [ -z "$(CHECKPOINT)" ]; then echo "Usage: make evaluate-elo-full CHECKPOINT=checkpoints/latest.pt"; exit 1; fi
+	docker compose run --rm chess-rl python evaluate_elo.py $(CHECKPOINT)
+
+# Evaluate random baseline (no checkpoint needed)
+evaluate-elo-baseline:
+	docker compose run --rm chess-rl python evaluate_elo.py --quick
+
+# ELO evaluation on GPU server
+evaluate-elo-gpu:
+	@if [ -z "$(GPU)" ] || [ -z "$(CHECKPOINT)" ]; then echo "Usage: make evaluate-elo-gpu GPU=0 CHECKPOINT=checkpoints/latest.pt [QUICK=1]"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python evaluate_elo.py $(CHECKPOINT) $(if $(QUICK),--quick,)
+
 # Help
 help:
 	@echo "Chess-RL Training Commands:"
@@ -310,6 +332,12 @@ help:
 	@echo "  make interactive-mac - Interactive on Mac"
 	@echo "  make analyze-games  - Analyze game quality"
 	@echo "  make clean-orphans  - Clean orphaned containers"
+	@echo ""
+	@echo "🏆 ELO EVALUATION:"
+	@echo "  make evaluate-elo-quick CHECKPOINT=file   - Quick ELO evaluation"
+	@echo "  make evaluate-elo-full CHECKPOINT=file    - Full ELO evaluation"
+	@echo "  make evaluate-elo-baseline                 - Evaluate random baseline"
+	@echo "  make evaluate-elo-gpu GPU=0 CHECKPOINT=file - ELO evaluation on GPU"
 	@echo ""
 	@echo "🧹 UTILITIES:"
 	@echo "  make clean          - Clean Python cache"
