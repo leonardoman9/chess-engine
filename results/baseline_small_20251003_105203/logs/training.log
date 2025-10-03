@@ -1,0 +1,5 @@
+2025-10-03 10:52:04,059 - INFO - Starting training for 100 games
+2025-10-03 10:52:05,961 - INFO - Game 5: timeout in 50 moves
+2025-10-03 10:52:05,964 - INFO - Episode 1: Games 5/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:52:07,299 - INFO - Game 10: timeout in 50 moves
+2025-10-03 10:52:07,300 - INFO - Running evaluation against Stockfish...

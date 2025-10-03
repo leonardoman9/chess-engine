@@ -1,0 +1,69 @@
+2025-10-03 10:53:06,241 - INFO - Starting training for 100 games
+2025-10-03 10:53:10,199 - INFO - Game 5: timeout in 50 moves
+2025-10-03 10:53:10,209 - INFO - Episode 1: Games 5/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:13,214 - INFO - Game 10: timeout in 50 moves
+2025-10-03 10:53:13,215 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:13,959 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:13,959 - INFO - Episode 2: Games 10/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:17,104 - INFO - Game 15: timeout in 50 moves
+2025-10-03 10:53:17,106 - INFO - Episode 3: Games 15/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:20,188 - INFO - Game 20: timeout in 50 moves
+2025-10-03 10:53:20,189 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:20,669 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:20,954 - INFO - Checkpoint saved: results/baseline_small_20251003_105305/checkpoints/checkpoint_game_20.pt
+2025-10-03 10:53:20,955 - INFO - Episode 4: Games 20/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:24,084 - INFO - Game 25: timeout in 50 moves
+2025-10-03 10:53:24,086 - INFO - Episode 5: Games 25/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:27,136 - INFO - Game 30: timeout in 50 moves
+2025-10-03 10:53:27,139 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:27,665 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:27,665 - INFO - Episode 6: Games 30/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:30,553 - INFO - Game 35: timeout in 50 moves
+2025-10-03 10:53:30,553 - INFO - Episode 7: Games 35/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:33,748 - INFO - Game 40: timeout in 50 moves
+2025-10-03 10:53:33,749 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:34,057 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:34,240 - INFO - Checkpoint saved: results/baseline_small_20251003_105305/checkpoints/checkpoint_game_40.pt
+2025-10-03 10:53:34,240 - INFO - Episode 8: Games 40/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:37,255 - INFO - Game 45: timeout in 50 moves
+2025-10-03 10:53:37,256 - INFO - Episode 9: Games 45/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:40,685 - INFO - Game 50: timeout in 50 moves
+2025-10-03 10:53:40,687 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:41,253 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:41,254 - INFO - Episode 10: Games 50/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:44,370 - INFO - Game 55: timeout in 50 moves
+2025-10-03 10:53:44,371 - INFO - Episode 11: Games 55/100, Avg Reward: 1.470, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:47,588 - INFO - Game 60: timeout in 50 moves
+2025-10-03 10:53:47,589 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:48,509 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:48,694 - INFO - Checkpoint saved: results/baseline_small_20251003_105305/checkpoints/checkpoint_game_60.pt
+2025-10-03 10:53:48,694 - INFO - Episode 12: Games 60/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:52,718 - INFO - Game 65: timeout in 50 moves
+2025-10-03 10:53:52,720 - INFO - Episode 13: Games 65/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:53:56,700 - INFO - Game 70: timeout in 50 moves
+2025-10-03 10:53:56,703 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:53:57,286 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:53:57,287 - INFO - Episode 14: Games 70/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:01,067 - INFO - Game 75: timeout in 50 moves
+2025-10-03 10:54:01,069 - INFO - Episode 15: Games 75/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:04,560 - INFO - Game 80: timeout in 50 moves
+2025-10-03 10:54:04,562 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:54:05,036 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:54:05,302 - INFO - Checkpoint saved: results/baseline_small_20251003_105305/checkpoints/checkpoint_game_80.pt
+2025-10-03 10:54:05,302 - INFO - Episode 16: Games 80/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:09,064 - INFO - Game 85: timeout in 50 moves
+2025-10-03 10:54:09,066 - INFO - Episode 17: Games 85/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:12,703 - INFO - Game 90: timeout in 50 moves
+2025-10-03 10:54:12,705 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:54:13,285 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:54:13,286 - INFO - Episode 18: Games 90/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:16,511 - INFO - Game 95: timeout in 50 moves
+2025-10-03 10:54:16,513 - INFO - Episode 19: Games 95/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:20,312 - INFO - Game 100: timeout in 50 moves
+2025-10-03 10:54:20,313 - INFO - Running evaluation against Stockfish...
+2025-10-03 10:54:20,625 - INFO - Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000
+2025-10-03 10:54:20,777 - INFO - Checkpoint saved: results/baseline_small_20251003_105305/checkpoints/checkpoint_game_100.pt
+2025-10-03 10:54:20,778 - INFO - Episode 20: Games 100/100, Avg Reward: 2.500, Win Rate: 0.000, Epsilon: 1.000
+2025-10-03 10:54:20,932 - INFO - Final model saved: results/baseline_small_20251003_105305/final_model.pt
+2025-10-03 10:54:20,933 - INFO - Running final evaluation...
+2025-10-03 10:54:26,634 - INFO - Final Evaluation - Win: 0.000, Draw: 0.000, Loss: 1.000

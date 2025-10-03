@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     tzdata \
+    stockfish \
     && ln -fs /usr/share/zoneinfo/$TZ /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
@@ -32,6 +33,10 @@ COPY src/ src/
 COPY api/ api/
 COPY models/ models/
 COPY test_dqn_phase1.py .
+COPY test_training.py .
+COPY train_dqn.py .
+COPY analyze_games.py .
+COPY analyze_training.py .
 COPY tasklist.md .
 
 # Create directories for training artifacts

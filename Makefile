@@ -22,9 +22,29 @@ interactive:
 tensorboard:
 	docker-compose run --rm chess-rl tensorboard --logdir=/app/logs --host=0.0.0.0 --port=6006
 
-# Start full training pipeline (when ready)
+# Test training setup
+test-training:
+	docker-compose run --rm chess-rl python test_training.py
+
+# Train DQN model (quick test)
+train-quick:
+	docker-compose run --rm chess-rl python train_dqn.py baseline_small
+
+# Train DQN model (development)
+train-dev:
+	docker-compose run --rm chess-rl python train_dqn.py baseline_medium
+
+# Train DQN model (production)
+train-prod:
+	docker-compose run --rm chess-rl python train_dqn.py baseline_large
+
+# List available experiments
+list-experiments:
+	docker-compose run --rm chess-rl python train_dqn.py --list-experiments
+
+# Legacy training command
 train-dqn:
-	docker-compose run --rm chess-rl python src/training/train_dqn.py
+	docker-compose run --rm chess-rl python train_dqn.py baseline_medium
 
 # ============ SERVER DEPLOYMENT ============
 # Commands optimized for A40 server deployment
@@ -59,10 +79,15 @@ interactive-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make interactive-gpu GPU=1"; exit 1; fi
 	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl bash -c "nvidia-smi && /bin/bash"
 
-# Training on specific GPU
+# Training on specific GPU (quick)
+train-gpu-quick:
+	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu-quick GPU=1"; exit 1; fi
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py baseline_small
+
+# Training on specific GPU (server experiment)
 train-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-gpu GPU=1"; exit 1; fi
-	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python src/training/train_dqn.py
+	CUDA_VISIBLE_DEVICES=$(GPU) docker-compose -f docker-compose.yml -f docker-compose.server.yml run --rm chess-rl python train_dqn.py server_experiment
 
 # Check GPU status
 gpu-status:
@@ -169,6 +194,30 @@ interactive-mac:
 clean-orphans:
 	docker-compose down --remove-orphans
 
+# Analyze game quality
+analyze-games:
+	docker-compose run --rm chess-rl python analyze_games.py --games 5
+
+# Analyze with checkpoint
+analyze-checkpoint:
+	@if [ -z "$(CHECKPOINT)" ]; then echo "Usage: make analyze-checkpoint CHECKPOINT=path/to/checkpoint.pt"; exit 1; fi
+	docker-compose run --rm chess-rl python analyze_games.py --games 5 --load-checkpoint $(CHECKPOINT)
+
+# Analyze training results
+analyze-training:
+	@if [ -z "$(RESULTS)" ]; then echo "Usage: make analyze-training RESULTS=results/experiment_dir"; exit 1; fi
+	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS)
+
+# Generate training plots
+training-plots:
+	@if [ -z "$(RESULTS)" ]; then echo "Usage: make training-plots RESULTS=results/experiment_dir"; exit 1; fi
+	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS) --plots
+
+# Generate sample games from checkpoint
+sample-games:
+	@if [ -z "$(RESULTS)" ]; then echo "Usage: make sample-games RESULTS=results/experiment_dir [CHECKPOINT=checkpoint.pt]"; exit 1; fi
+	docker-compose run --rm chess-rl python analyze_training.py $(RESULTS) --generate-games $(if $(CHECKPOINT),--checkpoint $(CHECKPOINT),)
+
 # Help
 help:
 	@echo "Chess-RL Training Commands:"
@@ -176,8 +225,14 @@ help:
 	@echo "🐳 MAIN COMMANDS:"
 	@echo "  make build          - Build Docker image"
 	@echo "  make test-phase1    - Test Phase 1 DQN implementation"
+	@echo "  make test-training  - Test training setup"
 	@echo "  make interactive    - Start interactive container"
-	@echo "  make train-dqn      - Start DQN training"
+	@echo ""
+	@echo "🎯 TRAINING COMMANDS:"
+	@echo "  make list-experiments - List available experiments"
+	@echo "  make train-quick    - Quick training test (100 games)"
+	@echo "  make train-dev      - Development training (500 games)"
+	@echo "  make train-prod     - Production training (2000 games)"
 	@echo ""
 	@echo "🖥️  SERVER COMMANDS:"
 	@echo "  make server-setup   - Setup and test on server"
@@ -205,6 +260,7 @@ help:
 	@echo "🍎 MAC DEVELOPMENT:"
 	@echo "  make test-mac       - Test on Mac (CPU only)"
 	@echo "  make interactive-mac - Interactive on Mac"
+	@echo "  make analyze-games  - Analyze game quality"
 	@echo "  make clean-orphans  - Clean orphaned containers"
 	@echo ""
 	@echo "🧹 UTILITIES:"

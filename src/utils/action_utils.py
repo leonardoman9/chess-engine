@@ -275,6 +275,46 @@ def get_action_space() -> ChessActionSpace:
     return global_action_space
 
 
+def move_to_action(move: chess.Move) -> int:
+    """Convert chess move to action index using global action space"""
+    return global_action_space.move_to_action(move)
+
+
+def action_to_move(action: int, board: chess.Board = None) -> Optional[chess.Move]:
+    """
+    Convert action index to chess move using global action space
+    
+    Args:
+        action: Action index
+        board: Chess board (used to validate the move)
+        
+    Returns:
+        Chess move object or None if invalid
+    """
+    move_uci = global_action_space.action_to_move(action)
+    if move_uci is None:
+        return None
+    
+    try:
+        move = chess.Move.from_uci(move_uci)
+        # If board is provided, check if move is legal
+        if board is not None and move not in board.legal_moves:
+            return None
+        return move
+    except:
+        return None
+
+
+def get_legal_actions_mask(board: chess.Board) -> torch.Tensor:
+    """Get legal actions mask using global action space"""
+    return global_action_space.get_legal_actions_mask(board)
+
+
+def get_legal_actions(board: chess.Board) -> List[int]:
+    """Get legal actions list using global action space"""
+    return global_action_space.get_legal_actions(board)
+
+
 if __name__ == "__main__":
     # Test the action space
     action_space = ChessActionSpace()
