@@ -7,7 +7,7 @@ import sys
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -18,6 +18,8 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for server environments
 import seaborn as sns
 import json
+from torch.utils.tensorboard import SummaryWriter
+from hydra.utils import get_original_cwd
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / 'src'))
@@ -28,12 +30,30 @@ from src.models.dueling_dqn import ModelConfig
 from src.utils.exploration import ExplorationConfig
 from src.utils.action_utils import get_action_space
 
+GNN_AVAILABLE = True
+GNN_IMPORT_ERROR: Optional[Exception] = None
+
+try:
+    from src.models.gnn_dqn import GNNDQN, GNNDQNConfig
+except Exception as e:
+    GNN_AVAILABLE = False
+    GNN_IMPORT_ERROR = e
+    GNNDQN = None  # type: ignore
+    GNNDQNConfig = None  # type: ignore
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+if not GNN_AVAILABLE:
+    logger.warning(
+        "Optional graph dependencies (torch-scatter/cluster/sparse) could not be loaded. "
+        "GNN-based experiments will be unavailable in this environment. "
+        f"Import error: {GNN_IMPORT_ERROR}"
+    )
 
 
 def set_seed(seed: int):
@@ -95,6 +115,49 @@ def create_training_config(cfg: DictConfig) -> TrainingConfig:
         log_frequency=cfg.training.log_frequency,
         checkpoint_frequency=cfg.training.checkpoint_frequency
     )
+
+
+def create_model_from_config(cfg: DictConfig, device: torch.device):
+    """Create model from Hydra configuration (CNN or GNN)"""
+    if hasattr(cfg.model, '_target_') and 'gnn_dqn' in cfg.model._target_:
+        if not GNN_AVAILABLE:
+            raise RuntimeError(
+                "GNN model requested but optional torch-scatter/cluster/sparse dependencies "
+                "are not available in the current environment. "
+                f"Original import error: {GNN_IMPORT_ERROR}"
+            )
+        # GNN model
+        logger.info("Creating GNN-DQN model...")
+        
+        # Instantiate using Hydra's instantiate
+        model = hydra.utils.instantiate(cfg.model)
+        model = model.to(device)
+        
+        logger.info(f"GNN Model created with architecture: {cfg.model.config.gnn_type}")
+        logger.info(f"Hidden dim: {cfg.model.config.hidden_dim}, GNN layers: {cfg.model.config.num_gnn_layers}")
+        
+        return model, 'gnn'
+    else:
+        # CNN model (traditional DuelingDQN)
+        logger.info("Creating CNN-DQN model...")
+        
+        # For CNN models, we need to create the model config manually
+        model_config = ModelConfig(
+            conv_channels=list(cfg.model.conv_channels),
+            hidden_size=cfg.model.hidden_size,
+            dropout=getattr(cfg.model, 'dropout', 0.1),
+            activation=getattr(cfg.model, 'activation', 'relu')
+        )
+        
+        from src.models.dueling_dqn import DuelingDQN
+        kernel_sizes = getattr(cfg.model, 'kernel_sizes', None)
+        model = DuelingDQN(model_config, kernel_sizes=kernel_sizes)
+        model = model.to(device)
+        
+        logger.info(f"CNN Model created with channels: {cfg.model.conv_channels}")
+        logger.info(f"Hidden size: {cfg.model.hidden_size}")
+        
+        return model, 'cnn'
 
 
 def save_experiment_config(cfg: DictConfig, save_path: Path):
@@ -440,29 +503,74 @@ def main(cfg: DictConfig) -> None:
     exploration_config = create_exploration_config(cfg)
     training_config = create_training_config(cfg)
     
+    # Create model (CNN or GNN)
+    model, model_type = create_model_from_config(cfg, device)
+    
     # Create agent
-    logger.info("Initializing DQN Agent...")
-    agent = DQNAgent(
-        model_config={
-            'conv_channels': cfg.model.conv_channels,
+    logger.info(f"Initializing DQN Agent with {model_type.upper()} model...")
+    
+    if model_type == 'gnn':
+        # For GNN models, we need to pass the model directly
+        # We'll need to modify DQNAgent to accept pre-built models
+        # For now, let's create a custom agent setup
+        # Create agent with dummy CNN config first, then replace the model
+        agent = DQNAgent(
+            model_config={
+                'conv_channels': [64, 128],  # Dummy values
+                'hidden_size': 256
+            },
+            buffer_size=cfg.agent.buffer_size,
+            min_buffer_size=cfg.agent.min_buffer_size,
+            batch_size=cfg.agent.batch_size,
+            learning_rate=cfg.agent.learning_rate,
+            gamma=cfg.agent.gamma,
+            tau=cfg.agent.tau,
+            buffer_type=cfg.agent.replay_type,
+            exploration_config={
+                'strategy_type': cfg.exploration.strategy_type,
+                'epsilon_start': cfg.exploration.epsilon_start,
+                'epsilon_end': cfg.exploration.epsilon_end,
+                'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
+                'decay_type': cfg.exploration.decay_type
+            },
+            device=device
+        )
+        
+        # Replace the CNN model with our GNN model
+        agent.q_network = model
+        agent.target_network = hydra.utils.instantiate(cfg.model).to(device)
+        
+        # Update optimizer to use GNN parameters
+        agent.optimizer = torch.optim.Adam(agent.q_network.parameters(), lr=cfg.agent.learning_rate)
+        
+    else:
+        # CNN model - use standard agent creation
+        cnn_model_config = {
+            'conv_channels': list(cfg.model.conv_channels),
             'hidden_size': cfg.model.hidden_size
-        },
-        buffer_size=cfg.agent.buffer_size,
-        min_buffer_size=cfg.agent.min_buffer_size,
-        batch_size=cfg.agent.batch_size,
-        learning_rate=cfg.agent.learning_rate,
-        gamma=cfg.agent.gamma,
-        tau=cfg.agent.tau,
-        buffer_type=cfg.agent.replay_type,  # Map replay_type to buffer_type
-        exploration_config={
-            'strategy_type': cfg.exploration.strategy_type,
-            'epsilon_start': cfg.exploration.epsilon_start,
-            'epsilon_end': cfg.exploration.epsilon_end,
-            'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
-            'decay_type': cfg.exploration.decay_type
-        },
-        device=device
-    )
+        }
+        kernel_sizes = getattr(cfg.model, 'kernel_sizes', None)
+        if kernel_sizes is not None:
+            cnn_model_config['kernel_sizes'] = kernel_sizes
+
+        agent = DQNAgent(
+            model_config=cnn_model_config,
+            buffer_size=cfg.agent.buffer_size,
+            min_buffer_size=cfg.agent.min_buffer_size,
+            batch_size=cfg.agent.batch_size,
+            learning_rate=cfg.agent.learning_rate,
+            gamma=cfg.agent.gamma,
+            tau=cfg.agent.tau,
+            buffer_type=cfg.agent.replay_type,
+            exploration_config={
+                'strategy_type': cfg.exploration.strategy_type,
+                'epsilon_start': cfg.exploration.epsilon_start,
+                'epsilon_end': cfg.exploration.epsilon_end,
+                'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
+                'decay_type': cfg.exploration.decay_type
+            },
+            device=device
+        )
     
     logger.info(f"Agent initialized with {sum(p.numel() for p in agent.q_network.parameters())} parameters")
     
@@ -471,13 +579,27 @@ def main(cfg: DictConfig) -> None:
     
     # Get current working directory (Hydra changes it)
     results_dir = Path.cwd()
-    
+
+    writer: Optional[SummaryWriter] = None
+    try:
+        original_cwd = Path(get_original_cwd())
+        logs_root = original_cwd / cfg.paths.logs_dir
+        logs_root.mkdir(parents=True, exist_ok=True)
+        tensorboard_run_dir = logs_root / results_dir.name
+        tensorboard_run_dir.mkdir(parents=True, exist_ok=True)
+        writer = SummaryWriter(log_dir=str(tensorboard_run_dir))
+        logger.info(f"TensorBoard logging to: {tensorboard_run_dir}")
+    except Exception as e:
+        logger.warning(f"TensorBoard writer could not be initialized: {e}")
+        writer = None
+
     trainer = SelfPlayTrainer(
         agent=agent,
         config=training_config,
         stockfish_path=os.getenv('STOCKFISH_PATH', '/usr/games/stockfish'),
         log_dir=str(results_dir / "logs"),
-        checkpoint_dir=str(results_dir / "checkpoints")
+        checkpoint_dir=str(results_dir / "checkpoints"),
+        writer=writer
     )
     
     # Save experiment configuration (both new and legacy formats)
@@ -589,6 +711,10 @@ def main(cfg: DictConfig) -> None:
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise
+    finally:
+        if writer:
+            writer.flush()
+            writer.close()
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 # @package _global_
 exploration:
-  name: balanced
+  name: balanced_fast
   strategy_type: linear
   epsilon_start: 1.0
-  epsilon_end: 0.1
-  epsilon_decay_steps: 200000
+  epsilon_end: 0.05
+  epsilon_decay_steps: 50000
   decay_type: linear

@@ -1,0 +1,55 @@
+# @package _global_
+# GNN Baseline Experiment - Conservative approach for first GNN test
+
+defaults:
+  - base_config
+  - model: gnn_small
+  - training: quick
+  - exploration: conservative
+  - agent: small
+
+experiment_name: "gnn_baseline"
+description: "First GNN-DQN experiment with conservative settings"
+
+# Override training for GNN-specific needs
+training:
+  max_episodes: 100  # Start small for GNN
+  max_moves: 100     # Shorter games initially
+  game_timeout: 20.0
+  games_per_episode: 5  # Fewer games per episode due to GNN complexity
+  
+  # More frequent evaluation due to potential instability
+  eval_frequency: 10
+  eval_games: 5
+  
+  # Adjusted for GNN training dynamics
+  training_frequency: 3  # Train more frequently
+  target_update_frequency: 25  # More frequent target updates
+  
+  # Stockfish settings
+  stockfish_depth: 1
+  stockfish_time: 0.1
+  
+  # Logging
+  log_frequency: 5
+  checkpoint_frequency: 25
+
+# Agent settings optimized for GNN
+agent:
+  buffer_size: 5000      # Smaller buffer initially
+  min_buffer_size: 500   # Lower threshold
+  batch_size: 32         # Smaller batches for stability
+  learning_rate: 0.0003  # Conservative learning rate
+  gamma: 0.99
+  tau: 0.005             # Softer target updates
+  replay_type: "standard"  # Start with standard replay
+
+# Conservative exploration for GNN
+exploration:
+  strategy_type: "linear"
+  epsilon_start: 0.9
+  epsilon_end: 0.2
+  epsilon_decay_steps: 3000  # Slower decay
+
+# Device settings
+device: "cpu"  # Start with CPU for debugging

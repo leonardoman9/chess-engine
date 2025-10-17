@@ -5,11 +5,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
     volumes:
-      - ./models:/app/models
-      - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs
       - ./results:/app/results
-      - ./data:/app/data
     deploy:
       resources:
         reservations:

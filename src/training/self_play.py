@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import time
 import logging
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
 
 from ..agents.dqn_agent import DQNAgent
 from ..utils.action_utils import board_to_tensor, action_to_move, move_to_action
@@ -59,7 +60,8 @@ class SelfPlayTrainer:
         config: TrainingConfig,
         stockfish_path: str = "/usr/games/stockfish",
         log_dir: str = "logs",
-        checkpoint_dir: str = "checkpoints"
+        checkpoint_dir: str = "checkpoints",
+        writer: Optional[SummaryWriter] = None
     ):
         self.agent = agent
         self.config = config
@@ -70,6 +72,9 @@ class SelfPlayTrainer:
         self.checkpoint_dir = Path(checkpoint_dir)
         self.log_dir.mkdir(exist_ok=True)
         self.checkpoint_dir.mkdir(exist_ok=True)
+
+        self.writer = writer
+        self.episode_counter = 0
         
         # Setup logging
         logging.basicConfig(
@@ -81,6 +86,12 @@ class SelfPlayTrainer:
             ]
         )
         self.logger = logging.getLogger(__name__)
+
+        if not Path(self.stockfish_path).exists():
+            self.logger.warning(
+                f"Stockfish executable not found at '{self.stockfish_path}'. "
+                "The trainer will attempt to fall back to the system path."
+            )
         
         # Training statistics
         self.games_played = 0
@@ -143,9 +154,18 @@ class SelfPlayTrainer:
                 if move not in board.legal_moves:
                     # Invalid move - penalize and select random legal move
                     move = random.choice(list(board.legal_moves))
-                    reward = -0.1  # Small penalty for invalid moves
+                    reward = -0.2  # Stronger penalty for invalid moves
                 else:
-                    reward = 0.01  # Small reward for valid moves
+                    # Base reward for valid move
+                    reward = 0.001
+                    
+                    # Bonus for tactical moves
+                    if board.is_capture(move):
+                        reward += 0.02  # Bonus for captures
+                    if board.gives_check(move):
+                        reward += 0.01  # Bonus for checks
+                    if board.is_castling(move):
+                        reward += 0.01  # Bonus for castling
             except:
                 # Fallback to random move
                 move = random.choice(list(board.legal_moves))
@@ -161,15 +181,17 @@ class SelfPlayTrainer:
             # Calculate final reward
             if done:
                 if board.is_checkmate():
-                    # Reward winner, penalize loser
+                    # Strong reward/penalty for wins/losses
                     if board.turn:  # Black wins (white to move but checkmated)
-                        reward = -1.0 if current_agent == white_agent else 1.0
+                        reward = -10.0 if current_agent == white_agent else 10.0
                     else:  # White wins (black to move but checkmated)
-                        reward = 1.0 if current_agent == white_agent else -1.0
-                elif board.is_stalemate() or board.is_insufficient_material():
-                    reward = 0.0  # Draw
+                        reward = 10.0 if current_agent == white_agent else -10.0
+                elif board.is_stalemate():
+                    reward = -1.0  # Slight penalty for stalemate (missed win opportunity)
+                elif board.is_insufficient_material():
+                    reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = 0.0  # Other draw conditions
+                    reward = -0.5  # Small penalty for other draws (repetition, 50-move rule)
             
             # Store experience (only for the agent we're training)
             if current_agent == self.agent:
@@ -191,6 +213,11 @@ class SelfPlayTrainer:
         elif move_count >= self.config.max_moves:
             winner = None
             termination = 'timeout'
+            if experiences:
+                last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                timeout_penalty = -2.0
+                experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
+                game_reward += timeout_penalty
         else:
             winner = None
             termination = 'draw'
@@ -299,6 +326,13 @@ class SelfPlayTrainer:
                     episode_stats['training_loss'] += metrics.get('loss', 0)
                     episode_stats['training_steps'] += 1
                     self.training_steps += 1
+
+                    if self.writer:
+                        step = self.training_steps
+                        self.writer.add_scalar("training/loss", metrics.get('loss', 0.0), step)
+                        self.writer.add_scalar("training/mean_q_value", metrics.get('mean_q_value', 0.0), step)
+                        self.writer.add_scalar("training/epsilon", metrics.get('epsilon', 0.0), step)
+                        self.writer.add_scalar("replay/buffer_size", metrics.get('buffer_size', 0), step)
             
             # Update target network
             if self.training_steps % self.config.target_update_frequency == 0:
@@ -359,13 +393,27 @@ class SelfPlayTrainer:
             history['episode_lengths'].append(episode_stats['avg_game_length'])
             history['win_rates'].append(episode_stats['win_rate'])
             history['training_losses'].append(episode_stats['training_loss'])
+
+            if self.writer:
+                self.writer.add_scalar("episode/total_reward", episode_stats['total_reward'], episode_num)
+                self.writer.add_scalar("episode/avg_game_length", episode_stats['avg_game_length'], episode_num)
+                self.writer.add_scalar("episode/win_rate", episode_stats['win_rate'], episode_num)
+                self.writer.add_scalar("episode/draw_rate", episode_stats.get('draw_rate', 0.0), episode_num)
+                self.writer.add_scalar("episode/training_loss", episode_stats['training_loss'], episode_num)
+                self.writer.add_scalar("exploration/epsilon_episode", self.agent.exploration.get_epsilon(), episode_num)
             
             # Evaluation
             if self.games_played % self.config.eval_frequency == 0:
                 self.logger.info("Running evaluation against Stockfish...")
                 eval_results = self.evaluate_against_stockfish(self.config.eval_games)
                 history['eval_results'].append(eval_results)
-                
+
+                if self.writer:
+                    step = self.games_played
+                    self.writer.add_scalar("evaluation/win_rate", eval_results.get('win_rate', 0.0), step)
+                    self.writer.add_scalar("evaluation/draw_rate", eval_results.get('draw_rate', 0.0), step)
+                    self.writer.add_scalar("evaluation/loss_rate", eval_results.get('loss_rate', 0.0), step)
+            
                 self.logger.info(
                     f"Evaluation - Win: {eval_results['win_rate']:.3f}, "
                     f"Draw: {eval_results['draw_rate']:.3f}, "
@@ -397,6 +445,11 @@ class SelfPlayTrainer:
         self.logger.info("Running final evaluation...")
         final_eval = self.evaluate_against_stockfish(50)  # More games for final eval
         history['final_evaluation'] = final_eval
+
+        if self.writer:
+            self.writer.add_scalar("evaluation/final_win_rate", final_eval.get('win_rate', 0.0), self.games_played)
+            self.writer.add_scalar("evaluation/final_draw_rate", final_eval.get('draw_rate', 0.0), self.games_played)
+            self.writer.add_scalar("evaluation/final_loss_rate", final_eval.get('loss_rate', 0.0), self.games_played)
         
         # Comprehensive ELO evaluation
         self.logger.info("🎯 Running comprehensive ELO evaluation...")
@@ -412,6 +465,11 @@ class SelfPlayTrainer:
                 'total_games': elo_evaluation.total_games,
                 'overall_score': elo_evaluation.overall_score
             }
+
+            if self.writer:
+                self.writer.add_scalar("elo/estimated_elo", elo_evaluation.estimated_elo, self.games_played)
+                self.writer.add_scalar("elo/total_games", elo_evaluation.total_games, self.games_played)
+
             self.logger.info(f"🏆 Final ELO Rating: {elo_evaluation.estimated_elo} "
                            f"(95% CI: {elo_evaluation.confidence_interval[0]}-{elo_evaluation.confidence_interval[1]})")
         except Exception as e:
@@ -420,6 +478,10 @@ class SelfPlayTrainer:
             try:
                 quick_elo = quick_elo_estimate(self.agent, self.stockfish_path)
                 history['elo_evaluation'] = {'estimated_elo': quick_elo, 'method': 'quick_estimate'}
+
+                if self.writer:
+                    self.writer.add_scalar("elo/estimated_elo", quick_elo, self.games_played)
+
                 self.logger.info(f"🏆 Quick ELO Estimate: {quick_elo}")
             except Exception as e2:
                 self.logger.error(f"Quick ELO estimate also failed: {e2}")
@@ -434,5 +496,8 @@ class SelfPlayTrainer:
         # Cleanup
         if self._stockfish_engine:
             self._stockfish_engine.quit()
+
+        if self.writer:
+            self.writer.flush()
         
         return history

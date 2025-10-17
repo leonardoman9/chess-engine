@@ -1,0 +1,10 @@
+# @package _global_
+agent:
+  name: improved_small
+  buffer_size: 75000
+  min_buffer_size: 5000
+  batch_size: 64          # Batch size maggiore
+  learning_rate: 5e-4     # Learning rate ottimizzato
+  gamma: 0.99
+  tau: 0.01               # Soft update più veloce
+  replay_type: standard

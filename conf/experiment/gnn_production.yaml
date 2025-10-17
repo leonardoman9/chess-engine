@@ -1,0 +1,54 @@
+# @package _global_
+# GNN Production Experiment - Full-scale training
+
+defaults:
+  - base_config
+  - model: gnn_large
+  - training: production
+  - exploration: aggressive
+  - agent: large
+
+experiment_name: "gnn_production"
+description: "Production-scale GNN-DQN training with full features"
+
+# Production training settings
+training:
+  max_episodes: 1000
+  max_moves: 200
+  game_timeout: 45.0
+  games_per_episode: 10
+  
+  # Evaluation
+  eval_frequency: 50
+  eval_games: 20
+  
+  # Training dynamics
+  training_frequency: 10
+  target_update_frequency: 100
+  
+  # Stockfish
+  stockfish_depth: 1
+  stockfish_time: 0.15
+  
+  # Logging
+  log_frequency: 20
+  checkpoint_frequency: 100
+
+# Large agent settings
+agent:
+  buffer_size: 50000
+  min_buffer_size: 5000
+  batch_size: 128
+  learning_rate: 0.001
+  gamma: 0.99
+  tau: 0.01
+  replay_type: "prioritized"  # Use prioritized replay for production
+
+# Aggressive exploration
+exploration:
+  strategy_type: "cosine"
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 15000
+
+device: "cuda:0"  # GPU for production

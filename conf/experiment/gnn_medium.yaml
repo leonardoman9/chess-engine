@@ -1,0 +1,54 @@
+# @package _global_
+# GNN Medium Experiment - Balanced approach for development
+
+defaults:
+  - base_config
+  - model: gnn_medium
+  - training: development
+  - exploration: balanced
+  - agent: medium
+
+experiment_name: "gnn_medium"
+description: "Medium-scale GNN-DQN experiment with hybrid architecture"
+
+# Training settings for medium GNN
+training:
+  max_episodes: 500
+  max_moves: 150
+  game_timeout: 30.0
+  games_per_episode: 8
+  
+  # Evaluation
+  eval_frequency: 25
+  eval_games: 10
+  
+  # Training dynamics
+  training_frequency: 5
+  target_update_frequency: 50
+  
+  # Stockfish
+  stockfish_depth: 1
+  stockfish_time: 0.1
+  
+  # Logging
+  log_frequency: 10
+  checkpoint_frequency: 50
+
+# Agent settings for medium GNN
+agent:
+  buffer_size: 15000
+  min_buffer_size: 1500
+  batch_size: 64
+  learning_rate: 0.0005
+  gamma: 0.99
+  tau: 0.01
+  replay_type: "standard"
+
+# Balanced exploration
+exploration:
+  strategy_type: "exponential"
+  epsilon_start: 1.0
+  epsilon_end: 0.1
+  epsilon_decay_steps: 8000
+
+device: "cpu"

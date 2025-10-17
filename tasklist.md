@@ -8,6 +8,8 @@
 **Hardware Target:** NVIDIA A40 (48GB VRAM)  
 **Budget Computazionale:** ≤20M transizioni, ≤100k partite
 
+**Stato attuale (apr 2025):** La fase 1 è stata completata; le fasi successive restano da implementare/validare.
+
 ---
 
 ## 🚀 **PHASE 1: Core DQN Architecture** 
@@ -19,7 +21,7 @@ Implementare tutti i componenti fondamentali per Deep Q-Network con le estension
 ### 📋 Tasks
 
 #### 1.1 DQNAgent Class Implementation
-**Status:** 🔴 Todo  
+**Status:** 🟢 Completed  
 **Effort:** 3-4 giorni  
 **Description:** 
 - Creare classe principale `DQNAgent` che gestisce:
@@ -27,48 +29,48 @@ Implementare tutti i componenti fondamentali per Deep Q-Network con le estension
   - Experience replay buffer (CircularBuffer da 500k transizioni)
   - Epsilon-greedy exploration con decay schedule
   - Action selection con masking per mosse legali
-- **Deliverable:** `src/agents/dqn_agent.py`
+- **Deliverable:** `src/agents/dqn_agent.py` *(implementato)*
 
 #### 1.2 Dueling DQN Architecture
-**Status:** 🔴 Todo  
+**Status:** 🟢 Completed  
 **Effort:** 2-3 giorni  
 **Description:**
 - Implementare Dueling DQN con separazione Value/Advantage streams
 - Architecture: Conv layers → Dense → Split → V(s) + A(s,a) → Q(s,a)
 - Support per CNN baseline (Phase 4) e future GNN extension (Phase 5)
-- **Deliverable:** `src/models/dueling_dqn.py`
+- **Deliverable:** `src/models/dueling_dqn.py` *(implementato)*
 
 #### 1.3 Target Network & Soft Updates
-**Status:** 🔴 Todo  
+**Status:** 🟢 Completed  
 **Effort:** 1-2 giorni  
 **Description:**
 - Implementare target network per stabilità training
 - Soft update mechanism: θ_target = τ*θ_main + (1-τ)*θ_target con τ=0.005
 - Automatic target network synchronization durante training
-- **Deliverable:** Update `DQNAgent` con target network logic
+- **Deliverable:** Update `DQNAgent` con target network logic *(implementato)*
 
 #### 1.4 Action Masking System
-**Status:** 🔴 Todo  
+**Status:** 🟢 Completed  
 **Effort:** 2 giorni  
 **Description:**
 - Sistema per mascherare azioni illegali durante Q-value computation
 - Conversione mosse UCI → action indices e viceversa
 - Integration con python-chess per legal move generation
-- **Deliverable:** `src/utils/action_utils.py`
+- **Deliverable:** `src/utils/action_utils.py` *(implementato)*
 
 #### 1.5 Epsilon-Greedy Exploration
-**Status:** 🔴 Todo  
+**Status:** 🟢 Completed  
 **Effort:** 1 giorno  
 **Description:**
 - Implementare ε-greedy con linear decay: 1.0 → 0.05 in 1M steps
 - Support per different exploration schedules (exponential, cosine)
-- **Deliverable:** `src/utils/exploration.py`
+- **Deliverable:** `src/utils/exploration.py` *(implementato)*
 
 ### 🎯 Phase 1 Success Criteria
-- [ ] DQNAgent può fare rollout completo di una partita
-- [ ] Action masking previene mosse illegali al 100%
-- [ ] Target network updates funzionano correttamente
-- [ ] Memory usage sotto controllo per buffer 500k
+- [x] DQNAgent può fare rollout completo di una partita (self-play trainer attivo)
+- [x] Action masking previene mosse illegali al 100%
+- [x] Target network updates funzionano correttamente
+- [ ] Memory usage sotto controllo per buffer 500k *(da validare con run prolungati)*
 
 ---
 

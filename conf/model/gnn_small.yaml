@@ -1,0 +1,41 @@
+# @package _global_
+# Small GNN-DQN configuration for quick testing
+
+model:
+  _target_: src.models.gnn_dqn.GNNDQN
+  config:
+    _target_: src.models.gnn_dqn.GNNDQNConfig
+    
+    # Graph construction
+    graph_config:
+      _target_: src.utils.chess_graph.ChessGraphConfig
+      include_empty_squares: true
+      max_spatial_distance: 2
+      include_mobility_edges: true
+      include_tactical_edges: false  # Disable for speed in small model
+      normalize_features: true
+    
+    # Model architecture
+    node_input_dim: 16
+    edge_input_dim: 4
+    hidden_dim: 128
+    num_gnn_layers: 2
+    gnn_type: 'gat'  # Start with GAT for interpretability
+    
+    # GAT specific
+    num_attention_heads: 4
+    attention_dropout: 0.1
+    
+    # Pooling
+    pooling_types: ['mean', 'max']  # Simplified pooling
+    
+    # Output
+    action_size: 4672
+    dueling: true
+    
+    # Regularization
+    dropout: 0.2
+    layer_norm: true
+    
+    # Positional encoding
+    use_positional_encoding: true

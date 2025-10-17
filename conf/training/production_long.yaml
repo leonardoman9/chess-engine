@@ -1,0 +1,14 @@
+# @package _global_
+training:
+  name: production_long
+  max_moves: 120
+  game_timeout: 90.0
+  games_per_episode: 25
+  training_frequency: 10
+  target_update_frequency: 100
+  eval_frequency: 200
+  eval_games: 30
+  stockfish_depth: 1
+  stockfish_time: 0.3
+  log_frequency: 25
+  checkpoint_frequency: 250

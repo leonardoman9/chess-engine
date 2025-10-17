@@ -1,0 +1,11 @@
+# @package _global_
+model:
+  name: alphazero_medium
+  type: alphazero
+  input_channels: 119
+  conv_channels: [256]
+  residual_blocks: 10
+  policy_head_channels: 2
+  value_head_channels: 1
+  action_size: 4672
+  dropout: 0.1

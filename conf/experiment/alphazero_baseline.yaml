@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: alphazero_baseline
+  description: "AlphaZero-style network with policy+value heads"
+  total_games: 500
+  
+defaults:
+  - override /model: alphazero_small
+  - override /training: improved_quick
+  - override /exploration: fast_decay
+  - override /agent: improved_small

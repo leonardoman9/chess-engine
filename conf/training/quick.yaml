@@ -1,7 +1,7 @@
 # @package _global_
 training:
   name: quick
-  max_moves: 50
+  max_moves: 100
   game_timeout: 10.0
   games_per_episode: 5
   training_frequency: 2

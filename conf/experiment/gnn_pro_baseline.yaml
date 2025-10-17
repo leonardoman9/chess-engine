@@ -1,0 +1,54 @@
+# @package _global_
+# GNN-Pro Baseline: Test ottimizzato per competere con AlphaGateau
+
+defaults:
+  - base_config
+  - model: gnn_pro_small
+  - training: development
+  - exploration: balanced
+  - agent: medium
+
+experiment_name: "gnn_pro_baseline"
+description: "GNN-Pro baseline with enhanced features and ResGATEAU blocks"
+
+# Optimized training for GNN-Pro
+training:
+  max_episodes: 500
+  max_moves: 200     # Longer games for better learning
+  game_timeout: 45.0
+  games_per_episode: 10  # More games per episode
+  
+  # Evaluation
+  eval_frequency: 25
+  eval_games: 15
+  
+  # Training dynamics
+  training_frequency: 5
+  target_update_frequency: 50
+  
+  # Stockfish
+  stockfish_depth: 1
+  stockfish_time: 0.1
+  
+  # Logging
+  log_frequency: 10
+  checkpoint_frequency: 50
+
+# Agent optimized for GNN
+agent:
+  buffer_size: 20000     # Larger buffer for better learning
+  min_buffer_size: 2000
+  batch_size: 128        # Larger batches for stability
+  learning_rate: 0.0003  # Conservative for complex model
+  gamma: 0.99
+  tau: 0.01
+  replay_type: "standard"
+
+# Balanced exploration
+exploration:
+  strategy_type: "exponential"
+  epsilon_start: 1.0
+  epsilon_end: 0.1
+  epsilon_decay_steps: 10000  # Longer exploration
+
+device: "cpu"

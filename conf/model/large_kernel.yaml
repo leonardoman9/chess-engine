@@ -1,0 +1,9 @@
+# @package _global_
+model:
+  name: large_kernel
+  conv_channels: [64, 128, 256]
+  hidden_size: 512
+  dropout: 0.2
+  activation: relu
+  kernel_sizes: [7, 5, 3]  # Decreasing kernel sizes
+  use_large_kernels: true

@@ -37,7 +37,7 @@ class DuelingDQN(nn.Module):
     """
     
     def __init__(self, config: ModelConfig = None, input_channels=13, conv_channels=[64, 128, 256], 
-                 hidden_size=512, action_size=4672):
+                 hidden_size=512, action_size=4672, kernel_sizes=None):
         """
         Initialize Dueling DQN
         
@@ -47,6 +47,7 @@ class DuelingDQN(nn.Module):
             conv_channels: List of channel sizes for conv layers
             hidden_size: Size of dense layers
             action_size: Number of possible actions (all possible moves)
+            kernel_sizes: List of kernel sizes for each conv layer (default: [3,3,3])
         """
         super(DuelingDQN, self).__init__()
         

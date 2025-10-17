@@ -1,0 +1,8 @@
+# @package _global_
+exploration:
+  name: fast_decay
+  strategy_type: exponential
+  epsilon_start: 1.0
+  epsilon_end: 0.1
+  epsilon_decay_steps: 5000  # Molto più veloce per training brevi
+  decay_type: exponential

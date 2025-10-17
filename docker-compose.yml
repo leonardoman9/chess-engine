@@ -7,15 +7,11 @@ services:
       - TORCH_BACKENDS_CUDNN_BENCHMARK=true
       - STOCKFISH_PATH=/usr/games/stockfish
     volumes:
-      - ./models:/app/models
-      - ./checkpoints:/app/checkpoints
       - ./logs:/app/logs
       - ./results:/app/results
-      - ./data:/app/data
     ports:
       - "6006:6006"  # TensorBoard
-      - "8000:8000"  # API Backend
       - "8888:8888"  # Jupyter (optional)
-    command: python test_dqn_phase1.py
+    command: python train_hydra.py
     stdin_open: true
     tty: true 

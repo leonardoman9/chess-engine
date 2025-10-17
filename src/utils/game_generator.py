@@ -436,7 +436,7 @@ def save_games_summary(games: List[Dict[str, Any]], save_dir: Path):
                     'moves': game['moves'],
                     'captures': game['statistics']['captures'],
                     'checks': game['statistics']['checks'],
-                    'avg_agent_time': game['statistics']['avg_agent_time'],
+                    'avg_agent_time': game['statistics'].get('avg_agent_time', game['statistics'].get('avg_white_time', 0)),
                     'total_time': game['statistics']['total_time']
                 }
                 for game in games

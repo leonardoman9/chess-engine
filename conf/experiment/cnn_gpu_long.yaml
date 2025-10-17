@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: cnn_gpu_long
+  description: "CNN large model – long run (10k games) optimized for GPU"
+  total_games: 10000
+
+defaults:
+  - override /model: large
+  - override /training: production_long
+  - override /exploration: balanced_fast
+  - override /agent: large

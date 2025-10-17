@@ -1,0 +1,54 @@
+# @package _global_
+# GNN-Pro A40: Training intensivo su GPU A40 - Target ELO 800-1200
+
+defaults:
+  - base_config
+  - model: gnn_pro_a40
+  - training: production
+  - exploration: aggressive
+  - agent: large
+
+experiment_name: "gnn_pro_a40"
+description: "GNN-Pro optimized for A40 GPU with 48GB VRAM - Target ELO 800-1200"
+
+# Intensive training for A40
+training:
+  max_episodes: 2000     # Extended training
+  max_moves: 250         # Long games
+  game_timeout: 60.0
+  games_per_episode: 16  # Large batches of games
+  
+  # Evaluation
+  eval_frequency: 50
+  eval_games: 25
+  
+  # Training dynamics
+  training_frequency: 10
+  target_update_frequency: 100
+  
+  # Stockfish
+  stockfish_depth: 1
+  stockfish_time: 0.2
+  
+  # Logging
+  log_frequency: 25
+  checkpoint_frequency: 100
+
+# Large agent for A40
+agent:
+  buffer_size: 100000    # Massive buffer (utilize 48GB VRAM)
+  min_buffer_size: 10000
+  batch_size: 512        # Large batches for A40
+  learning_rate: 0.0005
+  gamma: 0.99
+  tau: 0.01
+  replay_type: "prioritized"  # Advanced replay
+
+# Aggressive exploration for long training
+exploration:
+  strategy_type: "cosine"
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 25000
+
+device: "cuda:0"

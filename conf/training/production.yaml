@@ -1,7 +1,7 @@
 # @package _global_
 training:
   name: production
-  max_moves: 200
+  max_moves: 100
   game_timeout: 60.0
   games_per_episode: 20
   training_frequency: 10

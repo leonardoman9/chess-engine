@@ -1,0 +1,46 @@
+# @package _global_
+# GNN-Pro Small: Ottimizzato per test rapidi
+
+model:
+  _target_: src.models.gnn_dqn.GNNDQN
+  config:
+    _target_: src.models.gnn_dqn.GNNDQNConfig
+    
+    # Enhanced graph construction
+    graph_config:
+      _target_: src.utils.chess_graph.ChessGraphConfig
+      include_empty_squares: true
+      max_spatial_distance: 2
+      include_mobility_edges: true
+      include_tactical_edges: true
+      normalize_features: true
+    
+    # Optimized architecture
+    node_input_dim: 24  # Enhanced node features
+    edge_input_dim: 8   # Enhanced edge features
+    hidden_dim: 256     # Reasonable size for testing
+    num_gnn_layers: 4   # Moderate depth
+    gnn_type: 'resgateau'  # AlphaGateau-inspired
+    
+    # Advanced options
+    use_residual_blocks: true
+    use_multiscale: false
+    
+    # Attention settings
+    num_attention_heads: 8
+    attention_dropout: 0.1
+    
+    # Pooling (AlphaGateau-style)
+    pooling_types: ['attention', 'hierarchical']
+    num_pooling_heads: 4
+    
+    # Output
+    action_size: 4672
+    dueling: true
+    
+    # Regularization
+    dropout: 0.2
+    layer_norm: true
+    
+    # Positional encoding
+    use_positional_encoding: true

@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: improved_baseline
+  description: "Improved CNN-DQN with better configurations"
+  total_games: 500  # Più partite per vedere miglioramenti
+  
+defaults:
+  - override /model: improved_small
+  - override /training: improved_quick
+  - override /exploration: fast_decay
+  - override /agent: improved_small

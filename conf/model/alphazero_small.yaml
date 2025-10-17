@@ -1,0 +1,11 @@
+# @package _global_
+model:
+  name: alphazero_small
+  type: alphazero  # New model type
+  input_channels: 119  # AlphaZero representation
+  conv_channels: [128]
+  residual_blocks: 5
+  policy_head_channels: 2
+  value_head_channels: 1
+  action_size: 4672
+  dropout: 0.1

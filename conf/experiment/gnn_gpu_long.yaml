@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: gnn_gpu_long
+  description: "GNN-DQN (pro A40) – long run (10k games) on GPU"
+  total_games: 10000
+
+defaults:
+  - override /model: gnn_pro_a40
+  - override /training: production_long
+  - override /exploration: balanced_fast
+  - override /agent: large
