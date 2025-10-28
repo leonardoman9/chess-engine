@@ -20,6 +20,15 @@ A chess engine implementation using Deep Q-Networks (DQN) with Convolutional Neu
 
 > **Stato attuale (apr 2025):** Tutti i componenti della fase 1 sono implementati. Le ottimizzazioni delle fasi 2-3 (mixed precision, parallel environment, logging avanzato, pipeline GNN completa) sono pianificate ma non ancora consolidate.
 
+## Project Status (ott 2025)
+
+- Pipeline RL completa (self-play DQN dueling, replay buffer, target network, reward shaping e valutazioni Stockfish) operativa sia con backbone **CNN** sia **GNN** (Torch Geometric).
+- Run dimostrativi completati su CPU (100–2000 game) e su GPU (fino a 10k game). Con risorse limitate l’ELO resta basso (~250), ma la pipeline è pronta per training estesi su hardware più potente.
+- Prossimi step per il project work da 3 CFU:
+  1. Eseguire run brevi vs run prolungati (CNN) e un test GNN, salvando log/TensorBoard/ELO.
+  2. Preparare relazione tecnica, presentazione e repository con istruzioni per la riproducibilità.
+  3. Documentare nelle conclusioni che run davvero competitivi richiedono milioni di partite su GPU.
+
 ## Prerequisites
 
 - Python 3.10+ (for local development)
@@ -145,6 +154,7 @@ make tensorboard LOGDIR=/app/logs/<nome_run>
    make evaluate-elo-full CHECKPOINT=results/<run_dir>/final_model.pt
    ```
 5. **Iterazione** – Regola `epsilon_decay_steps`, `stockfish_depth/time` e profilo `training` in base ai risultati. L'obiettivo 1100+ Elo richiede frequenti run da 5‑10k partite e, se possibile, l'uso di GPU.
+6. **Consegna accademica** – Salva grafici, stime Elo e PGN significativi per alimentare relazione tecnica, presentazione e repository da consegnare per l'esame.
 
 ## Container Management
 
@@ -380,3 +390,4 @@ Each configuration automatically includes:
   - Run esteso su GPU: `make train-hydra-gpu GPU=0 EXP=cnn_gpu_long`.
   - GNN baseline: `make train-hydra-custom PARAMS='experiment=gnn_baseline device=cpu'`.
   - GNN lungo su GPU: `make train-hydra-gpu GPU=0 EXP=gnn_gpu_long`.
+- **Suggerimento**: dopo il warmup iniziale, monitora `exploration/epsilon_episode`. Se ε resta >0.9 per gran parte del run, riduci `exploration.epsilon_decay_steps` (es. 5000) e/o aumenta `training.training_frequency` per aumentare il numero di update per partita.

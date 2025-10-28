@@ -8,7 +8,19 @@
 **Hardware Target:** NVIDIA A40 (48GB VRAM)  
 **Budget Computazionale:** ≤20M transizioni, ≤100k partite
 
-**Stato attuale (apr 2025):** La fase 1 è stata completata; le fasi successive restano da implementare/validare.
+**Stato attuale (ott 2025):** Tutta l'infrastruttura è operativa (CNN + GNN). Ora l'obiettivo è produrre run dimostrativi e la documentazione richiesta per il project work da 3 CFU.
+
+---
+
+## 📌 **Current Focus (ott 2025)**
+
+- [ ] **Baseline random** – eseguire `baseline_small` solo per raccolta log ed Elo iniziale (0 vittorie)
+- [ ] **Run CNN documentabile** – completare un run `baseline_large` (o `cnn_gpu_long` su GPU) con decadimento veloce (`exploration=balanced_fast`, `training_frequency=5`) e salvare TensorBoard/Elo
+- [ ] **Run GNN di confronto** – lanciare `gnn_baseline` (CPU) o `gnn_gpu_long` (GPU) con gli stessi parametri di logging
+- [ ] **Analisi & plotting** – usare `analyze_training.py`, `evaluate_elo.py` e salvare screenshot TensorBoard + PGN rilevanti (`results/<run>/sample_games`)
+- [ ] **Deliverable** – redigere relazione tecnica, preparare slide e ripulire il repository (README, istruzioni, log necessari)
+
+> Nota: Le fasi dettagliate qui sotto restano come roadmap estesa del progetto, ma per l'esame è sufficiente completare la lista sopra.
 
 ---
 
