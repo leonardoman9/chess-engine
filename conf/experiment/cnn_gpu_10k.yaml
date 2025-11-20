@@ -1,0 +1,19 @@
+# @package _global_
+experiment:
+  name: cnn_gpu_10k
+  description: "CNN large model – long run (10k games) optimized for GPU"
+  total_games: 10000
+
+defaults:
+  - override /model: large
+  - override /training: production_long
+  - override /exploration: balanced_fast
+  - override /agent: large
+
+training:
+  eval_frequency: 200
+  eval_games: 30
+  log_frequency: 50
+  checkpoint_frequency: 250
+
+device: "cuda:0"

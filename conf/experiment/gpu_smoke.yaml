@@ -1,0 +1,13 @@
+# @package _global_
+experiment:
+  name: gpu_smoke
+  description: "Quick GPU sanity check with small CNN"
+  total_games: 100
+
+defaults:
+  - override /model: small
+  - override /training: quick
+  - override /exploration: balanced_fast
+  - override /agent: small
+
+device: "cuda:0"

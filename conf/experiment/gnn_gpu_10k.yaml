@@ -1,0 +1,33 @@
+# @package _global_
+experiment:
+  name: gnn_gpu_10k
+  description: "GNN pro model – long run (10k games) on GPU"
+  total_games: 10000
+
+defaults:
+  - override /model: gnn_pro_a40
+  - override /training: production_long
+  - override /exploration: balanced_fast
+  - override /agent: large
+
+training:
+  games_per_episode: 20
+  training_frequency: 8
+  eval_frequency: 200
+  eval_games: 30
+  log_frequency: 50
+  checkpoint_frequency: 250
+
+agent:
+  buffer_size: 120000
+  min_buffer_size: 12000
+  batch_size: 256
+  learning_rate: 0.0004
+  replay_type: "prioritized"
+
+exploration:
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 50000
+
+device: "cuda:0"
