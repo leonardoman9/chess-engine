@@ -317,14 +317,14 @@ class SelfPlayTrainer:
         elif board.is_insufficient_material():
             winner = None
             termination = 'draw'
-            elif move_count >= self.config.max_moves:
-                winner = None
-                termination = 'timeout'
-                if experiences:
-                    last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                    timeout_penalty = -4.0
-                    experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
-                    game_reward += timeout_penalty
+        elif move_count >= self.config.max_moves:
+            winner = None
+            termination = 'timeout'
+            if experiences:
+                last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                timeout_penalty = -4.0
+                experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
+                game_reward += timeout_penalty
         else:
             winner = None
             termination = 'draw'
