@@ -176,9 +176,9 @@ class SelfPlayTrainer:
 
                 # Occupy center
                 if to_sq in center4:
-                    reward_pos += 0.1
+                    reward_pos += 0.04
                 elif to_sq in center16:
-                    reward_pos += 0.05
+                    reward_pos += 0.02
 
                 # Move toward center (Manhattan distance reduction)
                 def center_distance(sq: chess.Square) -> float:
@@ -188,19 +188,19 @@ class SelfPlayTrainer:
 
                 dist_before = center_distance(from_sq)
                 dist_after = center_distance(to_sq)
-                reward_pos += max(0.0, dist_before - dist_after) * 0.02
+                reward_pos += max(0.0, dist_before - dist_after) * 0.01
 
                 # Control center (attacks on center squares)
                 attacked_center = sum(
                     1 for sq in center4 if board_after.is_attacked_by(player_color, sq)
                 )
-                reward_pos += attacked_center * 0.02
+                reward_pos += attacked_center * 0.01
 
                 # King safety: castling done
                 king_square = board_after.king(player_color)
                 castle_targets = {chess.G1, chess.C1} if player_color == chess.WHITE else {chess.G8, chess.C8}
                 if king_square in castle_targets:
-                    reward_pos += 0.1
+                    reward_pos += 0.04
 
                 # Threats: pieces attacked by the moved piece
                 moved_piece = board_after.piece_at(to_sq)
@@ -208,7 +208,7 @@ class SelfPlayTrainer:
                     attacked = board_after.attacks(to_sq)
                     opponent = chess.BLACK if player_color == chess.WHITE else chess.WHITE
                     threats = sum(1 for sq in attacked if board_after.piece_at(sq) and board_after.piece_at(sq).color == opponent)
-                    reward_pos += threats * 0.02
+                    reward_pos += threats * 0.01
 
                 return reward_pos
             material_before = sum(
@@ -243,9 +243,9 @@ class SelfPlayTrainer:
                         if captured_piece is None and board.is_en_passant(move):
                             captured_piece = chess.Piece(chess.PAWN, not board.turn)
                         if captured_piece:
-                            reward += 0.18 * piece_values.get(captured_piece.piece_type, 0)
+                            reward += 0.08 * piece_values.get(captured_piece.piece_type, 0)
                     if board.gives_check(move):
-                        reward += 0.05
+                        reward += 0.02
 
                     # Positional/strategic shaping
                     reward += compute_positional_reward(board, move, board.turn)
@@ -290,15 +290,15 @@ class SelfPlayTrainer:
                     # Resignation is handled via bonus above; no extra change here
                     reward = 0.0
                 elif board.is_stalemate():
-                    reward = -2.5  # Penalty for stalemate
+                    reward = -4.0  # Penalty for stalemate
                 elif board.is_insufficient_material():
                     reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = -2.5  # Penalty for other draws (repetition, 50-move rule)
+                    reward = -4.0  # Penalty for other draws (repetition, 50-move rule)
             
             # Material delta bonus
             delta_material = material_after - material_before
-            reward += 0.03 * delta_material
+            reward += 0.01 * delta_material
             
             # Store experience (only for the agent we're training)
             if current_agent == self.agent:
@@ -317,14 +317,14 @@ class SelfPlayTrainer:
         elif board.is_insufficient_material():
             winner = None
             termination = 'draw'
-        elif move_count >= self.config.max_moves:
-            winner = None
-            termination = 'timeout'
-            if experiences:
-                last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                timeout_penalty = -2.5
-                experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
-                game_reward += timeout_penalty
+            elif move_count >= self.config.max_moves:
+                winner = None
+                termination = 'timeout'
+                if experiences:
+                    last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                    timeout_penalty = -4.0
+                    experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
+                    game_reward += timeout_penalty
         else:
             winner = None
             termination = 'draw'
