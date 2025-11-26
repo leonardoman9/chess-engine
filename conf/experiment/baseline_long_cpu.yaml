@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: baseline_long_cpu
+  description: "Long CPU run with sober shaping and longer horizon"
+  total_games: 20000
+
+defaults:
+  - override /model: medium128
+  - override /training: long
+  - override /exploration: balanced_long
+  - override /agent: medium

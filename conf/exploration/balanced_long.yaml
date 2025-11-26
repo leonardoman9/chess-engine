@@ -1,10 +1,10 @@
 # @package _global_
 exploration:
-  name: balanced
+  name: balanced_long
   strategy_type: linear
   epsilon_start: 1.0
   epsilon_end: 0.15
-  epsilon_decay_steps: 15000
+  epsilon_decay_steps: 30000
   decay_type: linear
   temperature_start: 1.1
   temperature_end: 0.85

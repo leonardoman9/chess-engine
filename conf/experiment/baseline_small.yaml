@@ -2,7 +2,7 @@
 experiment:
   name: baseline_small
   description: "Baseline CNN-DQN with small model for quick testing"
-  total_games: 100
+  total_games: 200
   
 defaults:
   - override /model: small

@@ -89,12 +89,13 @@ class DQNAgent:
         self.hard_update_target_network()
         
         # Optimizer
-        self.optimizer = optim.AdamW(self.q_network.parameters(), lr=learning_rate)
+        self.optimizer = optim.AdamW(self.q_network.parameters(), lr=learning_rate, weight_decay=1e-4)
         
         # Replay buffer
+        input_channels = model_config.get("input_channels", 13)
         buffer_config = {
             'capacity': buffer_size,
-            'state_shape': (13, 8, 8),
+            'state_shape': (input_channels, 8, 8),
             'device': self.device
         }
         self.replay_buffer = create_replay_buffer(buffer_type, **buffer_config)
@@ -102,7 +103,17 @@ class DQNAgent:
         
         # Exploration strategy
         exploration_config = exploration_config or {'strategy_type': 'standard'}
+        # Temperature scheduling (optional, removed from exploration kwargs before creation)
+        temp_start = exploration_config.pop('temperature_start', 1.0)
+        temp_end = exploration_config.pop('temperature_end', temp_start)
+        temp_decay_steps = exploration_config.pop('temperature_decay_steps', 0)
+
         self.exploration = create_exploration_strategy(**exploration_config)
+
+        self.temperature_start = temp_start
+        self.temperature_end = temp_end
+        self.temp_decay_steps = temp_decay_steps
+        self.temperature = self.temperature_start  # softmax temperature for action sampling
         
         # Training metrics
         self.training_step = 0
@@ -128,6 +139,15 @@ class DQNAgent:
         Returns:
             Selected action index
         """
+        # Update exploration step for training (one step per action)
+        if not deterministic:
+            self.exploration.update()
+            # Temperature annealing (optional)
+            if self.temp_decay_steps and self.temp_decay_steps > 0:
+                step = getattr(self.exploration, "current_step", 0)
+                frac = min(step / self.temp_decay_steps, 1.0)
+                self.temperature = self.temperature_start + frac * (self.temperature_end - self.temperature_start)
+        
         # Convert board to tensor
         state = board_to_tensor(board).unsqueeze(0).to(self.device)
         
@@ -139,8 +159,27 @@ class DQNAgent:
             q_values = self.q_network(state, legal_mask.unsqueeze(0))
             q_values = q_values.squeeze(0)
         
-        # Select action using exploration strategy
-        action = self.exploration.select_action(q_values, legal_mask, deterministic)
+        epsilon = getattr(self.exploration, "current_epsilon", self.exploration.get_epsilon())
+
+        if deterministic:
+            masked_q = q_values.masked_fill(~legal_mask, -float('inf'))
+            action = torch.argmax(masked_q).item()
+        else:
+            if np.random.random() < epsilon:
+                legal_indices = legal_mask.nonzero(as_tuple=False).squeeze(1)
+                action = np.random.choice(legal_indices.cpu().numpy())
+            else:
+                masked_q = q_values.masked_fill(~legal_mask, -float('inf'))
+                # Focus on top-k legal actions to reduce noise
+                top_k = 10
+                legal_indices = masked_q.topk(k=min(top_k, legal_mask.sum().item()), dim=0).indices
+                sub_q = masked_q[legal_indices]
+                logits = sub_q / max(self.temperature, 1e-3)
+                probs = torch.softmax(logits, dim=0)
+                probs_np = probs.cpu().numpy()
+                probs_np = probs_np / probs_np.sum() if probs_np.sum() > 0 else np.ones_like(probs_np) / len(probs_np)
+                chosen_idx = np.random.choice(len(probs_np), p=probs_np)
+                action = legal_indices[chosen_idx].item()
         
         return action
     
@@ -238,7 +277,7 @@ class DQNAgent:
         loss.backward()
         
         # Gradient clipping
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=10.0)
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=5.0)
         
         self.optimizer.step()
         
@@ -250,15 +289,14 @@ class DQNAgent:
         # Soft update target network
         self.soft_update_target_network()
         
-        # Update exploration
-        epsilon = self.exploration.update()
-        
         self.training_step += 1
         
         return {
             'loss': loss.item(),
             'mean_q_value': current_q_values.mean().item(),
-            'epsilon': epsilon,
+            'min_q_value': current_q_values.min().item(),
+            'max_q_value': current_q_values.max().item(),
+            'epsilon': self.exploration.get_epsilon(),
             'buffer_size': len(self.replay_buffer),
             'training_step': self.training_step
         }

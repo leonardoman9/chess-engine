@@ -1,9 +1,0 @@
-[Event "DQN Analysis Game 3"]
-[Site "Local"]
-[Date "2025.10.03"]
-[Round "3"]
-[White "DQN (final_model.pt)"]
-[Black "DQN (final_model.pt)"]
-[Result "*"]
-
-1. g4 e6 2. Bg2 g6 3. d4 Qf6 4. Nh3 Qe5 5. Qd2 a5 6. Nc3 Qxh2 7. Bxb7 Ra6 8. Bc6 Bb4 9. Rb1 Bc5 10. dxc5 Kd8 11. Rf1 f6 12. Nb5 Qe5 13. Bb7 Ke7 14. b3 Qh2 15. Nf4 d5 16. a4 Rc6 17. Qe3 Qg3 18. Nxg6+ Kf7 19. g5 Rxc5 20. Na3 d4 21. Qe4 Rc6 22. Nxh8+ Ke8 23. c3 Qh2 24. Rb2 h5 25. Rh1 Rc5 26. Nf7 Ke7 27. Qd3 Qg2 28. Ba6 Qe4 29. Bxc8 Qh4 30. Bxe6 Qh3 31. e3 Nd7 32. Bd2 Qxe6 33. Qc4 Kxf7 34. Qe2 Kf8 35. Rc2 Nb6 36. Rh4 Rc4 37. Kf1 Ke8 38. Rh3 Qd7 39. Rh2 Qe6 40. Qxc4 f5 41. Kg1 Qxe3 42. Qb4 Qxg5+ 43. Bxg5 dxc3 44. Rxc3 Nd5 45. Kf1 Ndf6 46. Qb6 Nh6 47. Rg3 Nh7 48. Bf4 c5 49. Rg4 Nf6 50. Qb5+ Kf8 *

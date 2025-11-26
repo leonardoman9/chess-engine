@@ -152,12 +152,12 @@ def board_to_tensor(board: chess.Board) -> torch.Tensor:
     
     Args:
         board: Chess board state
-        
+    
     Returns:
-        Tensor of shape [13, 8, 8] representing the board
+        Tensor of shape [15, 8, 8] representing the board
     """
-    # Initialize tensor: 12 pieces + 1 metadata channel
-    tensor = torch.zeros(13, 8, 8, dtype=torch.float32)
+    # Initialize tensor: 12 pieces + 1 metadata + 2 control channels
+    tensor = torch.zeros(15, 8, 8, dtype=torch.float32)
     
     # Piece type mapping
     piece_to_channel = {
@@ -197,6 +197,15 @@ def board_to_tensor(board: chess.Board) -> torch.Tensor:
         tensor[12, 7, 7] = 1.0
     if board.has_queenside_castling_rights(chess.BLACK):
         tensor[12, 7, 0] = 1.0
+
+    # Control maps: squares attacked by white (channel 13) and black (channel 14)
+    white_control = tensor[13]
+    black_control = tensor[14]
+    for square in chess.SQUARES:
+        if board.is_attacked_by(chess.WHITE, square):
+            white_control[square // 8, square % 8] = 1.0
+        if board.is_attacked_by(chess.BLACK, square):
+            black_control[square // 8, square % 8] = 1.0
     
     return tensor
 

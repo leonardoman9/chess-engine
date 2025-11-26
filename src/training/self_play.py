@@ -93,6 +93,9 @@ class SelfPlayTrainer:
                 "The trainer will attempt to fall back to the system path."
             )
         
+        # Action space helper (reuse agent's)
+        self.action_space = agent.action_space
+        
         # Training statistics
         self.games_played = 0
         self.training_steps = 0
@@ -138,15 +141,35 @@ class SelfPlayTrainer:
         while not board.is_game_over() and move_count < self.config.max_moves:
             if time.time() - start_time > self.config.game_timeout:
                 break
-                
+            
             # Current player
             current_agent = white_agent if board.turn else black_agent
+            current_agent_is_white = board.turn
             
-            # Get current state
+            # Get current state and material eval before move
             state = board_to_tensor(board)
+            piece_values = {
+                chess.PAWN: 1,
+                chess.KNIGHT: 3,
+                chess.BISHOP: 3,
+                chess.ROOK: 5,
+                chess.QUEEN: 9,
+                chess.KING: 0,
+            }
+            material_before = sum(
+                (len(board.pieces(pt, chess.WHITE)) - len(board.pieces(pt, chess.BLACK))) * val
+                for pt, val in piece_values.items()
+            )
             
-            # Agent selects action
-            action = current_agent.select_action(board)
+            # Opening randomization for first 3 plies
+            if move_count < 3:
+                legal_moves = list(board.legal_moves)
+                move = random.choice(legal_moves)
+                action = self.action_space.move_to_action(move)
+                reward = 0.0
+            else:
+                # Agent selects action
+                action = current_agent.select_action(board)
             
             # Convert action to move
             try:
@@ -154,44 +177,70 @@ class SelfPlayTrainer:
                 if move not in board.legal_moves:
                     # Invalid move - penalize and select random legal move
                     move = random.choice(list(board.legal_moves))
-                    reward = -0.2  # Stronger penalty for invalid moves
+                    reward = -0.2 * 0.05  # Stronger penalty for invalid moves, scaled
                 else:
                     # Base reward for valid move
-                    reward = 0.001
+                    reward = 0.0
                     
-                    # Bonus for tactical moves
+                    # Bonus for tactical moves (minimal shaping)
                     if board.is_capture(move):
-                        reward += 0.02  # Bonus for captures
+                        captured_piece = board.piece_at(move.to_square)
+                        if captured_piece is None and board.is_en_passant(move):
+                            captured_piece = chess.Piece(chess.PAWN, not board.turn)
+                        if captured_piece:
+                            reward += (0.15 * piece_values.get(captured_piece.piece_type, 0)) * 0.05
                     if board.gives_check(move):
-                        reward += 0.01  # Bonus for checks
-                    if board.is_castling(move):
-                        reward += 0.01  # Bonus for castling
+                        reward += 0.02 * 0.05
             except:
                 # Fallback to random move
                 move = random.choice(list(board.legal_moves))
-                reward = -0.1
+                reward = -0.1 * 0.05
             
             # Make move
             board.push(move)
             next_state = board_to_tensor(board)
-            
+
             # Check if game is over
             done = board.is_game_over()
+            resign = False
+            
+            # Material-based resign rule (moderate imbalance after opening)
+            material_after = sum(
+                (len(board.pieces(pt, chess.WHITE)) - len(board.pieces(pt, chess.BLACK))) * val
+                for pt, val in piece_values.items()
+            )
+            if not done and move_count >= 30:
+                imbalance = abs(material_after)
+                if imbalance >= 8:
+                    resign = True
+                    winner_color = chess.WHITE if material_after > 0 else chess.BLACK
+                    if experiences:
+                        last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                        bonus = 0.0
+                        experiences[-1] = (last_state, last_action, last_reward + bonus, last_next_state, True)
+                        game_reward += bonus
             
             # Calculate final reward
-            if done:
+            if done or resign:
                 if board.is_checkmate():
                     # Strong reward/penalty for wins/losses
                     if board.turn:  # Black wins (white to move but checkmated)
-                        reward = -10.0 if current_agent == white_agent else 10.0
+                        reward = (-20.0 if current_agent == white_agent else 20.0) * 0.05
                     else:  # White wins (black to move but checkmated)
-                        reward = 10.0 if current_agent == white_agent else -10.0
+                        reward = (20.0 if current_agent == white_agent else -20.0) * 0.05
+                elif resign:
+                    # Resignation is handled via bonus above; no extra change here
+                    reward = 0.0
                 elif board.is_stalemate():
-                    reward = -1.0  # Slight penalty for stalemate (missed win opportunity)
+                    reward = -2.0 * 0.05  # Penalty for stalemate
                 elif board.is_insufficient_material():
                     reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = -0.5  # Small penalty for other draws (repetition, 50-move rule)
+                    reward = -2.0 * 0.05  # Penalty for other draws (repetition, 50-move rule)
+            
+            # Material delta bonus
+            delta_material = material_after - material_before
+            reward += (0.03 * delta_material) * 0.05
             
             # Store experience (only for the agent we're training)
             if current_agent == self.agent:
@@ -215,7 +264,7 @@ class SelfPlayTrainer:
             termination = 'timeout'
             if experiences:
                 last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                timeout_penalty = -2.0
+                timeout_penalty = -2.0 * 0.05
                 experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
                 game_reward += timeout_penalty
         else:
@@ -284,6 +333,47 @@ class SelfPlayTrainer:
             'loss_rate': results['losses'] / total_games,
             'total_games': total_games
         }
+
+    def evaluate_against_random(self, num_games: int = 10) -> Dict[str, float]:
+        """Evaluate agent against a random-move opponent"""
+        results = {'wins': 0, 'draws': 0, 'losses': 0}
+
+        for game_idx in range(num_games):
+            board = chess.Board()
+            agent_is_white = game_idx % 2 == 0  # Alternate colors
+
+            while not board.is_game_over():
+                if (board.turn and agent_is_white) or (not board.turn and not agent_is_white):
+                    # Agent's turn
+                    action = self.agent.select_action(board, deterministic=True)
+                    try:
+                        move = action_to_move(action, board)
+                        if move not in board.legal_moves:
+                            move = random.choice(list(board.legal_moves))
+                    except:
+                        move = random.choice(list(board.legal_moves))
+                else:
+                    # Random opponent's turn
+                    move = random.choice(list(board.legal_moves))
+
+                board.push(move)
+
+            # Determine result from agent's perspective
+            if board.is_checkmate():
+                if (board.turn and not agent_is_white) or (not board.turn and agent_is_white):
+                    results['wins'] += 1  # Agent won
+                else:
+                    results['losses'] += 1  # Agent lost
+            else:
+                results['draws'] += 1  # Draw
+
+        total_games = sum(results.values())
+        return {
+            'win_rate': results['wins'] / total_games,
+            'draw_rate': results['draws'] / total_games,
+            'loss_rate': results['losses'] / total_games,
+            'total_games': total_games
+        }
     
     def train_episode(self, num_games: int) -> Dict[str, Any]:
         """Train for one episode (multiple games)"""
@@ -293,6 +383,7 @@ class SelfPlayTrainer:
             'avg_game_length': 0,
             'win_rate': 0,
             'training_loss': 0,
+            'mean_q_value': 0,
             'training_steps': 0
         }
         
@@ -324,6 +415,7 @@ class SelfPlayTrainer:
                 metrics = self.agent.train_step()
                 if metrics:
                     episode_stats['training_loss'] += metrics.get('loss', 0)
+                    episode_stats['mean_q_value'] += metrics.get('mean_q_value', 0)
                     episode_stats['training_steps'] += 1
                     self.training_steps += 1
 
@@ -354,6 +446,7 @@ class SelfPlayTrainer:
         
         if episode_stats['training_steps'] > 0:
             episode_stats['training_loss'] /= episode_stats['training_steps']
+            episode_stats['mean_q_value'] /= episode_stats['training_steps']
         
         return episode_stats
     
@@ -375,7 +468,8 @@ class SelfPlayTrainer:
             'episode_lengths': [],
             'win_rates': [],
             'training_losses': [],
-            'eval_results': []
+            'eval_results': [],
+            'eval_results_random': []
         }
         
         games_remaining = total_games
@@ -404,6 +498,22 @@ class SelfPlayTrainer:
             
             # Evaluation
             if self.games_played % self.config.eval_frequency == 0:
+                # Random opponent evaluation (sanity check)
+                rand_results = self.evaluate_against_random(self.config.eval_games)
+                history['eval_results_random'].append(rand_results)
+
+                if self.writer:
+                    step = self.games_played
+                    self.writer.add_scalar("evaluation_random/win_rate", rand_results.get('win_rate', 0.0), step)
+                    self.writer.add_scalar("evaluation_random/draw_rate", rand_results.get('draw_rate', 0.0), step)
+                    self.writer.add_scalar("evaluation_random/loss_rate", rand_results.get('loss_rate', 0.0), step)
+
+                self.logger.info(
+                    f"Eval vs random - Win: {rand_results['win_rate']:.3f}, "
+                    f"Draw: {rand_results['draw_rate']:.3f}, "
+                    f"Loss: {rand_results['loss_rate']:.3f}"
+                )
+
                 self.logger.info("Running evaluation against Stockfish...")
                 eval_results = self.evaluate_against_stockfish(self.config.eval_games)
                 history['eval_results'].append(eval_results)
@@ -430,6 +540,8 @@ class SelfPlayTrainer:
             self.logger.info(
                 f"Episode {episode_num}: Games {self.games_played}/{total_games}, "
                 f"Avg Reward: {episode_stats['total_reward']:.3f}, "
+                f"Loss: {episode_stats['training_loss']:.4f}, "
+                f"Mean Q: {episode_stats['mean_q_value']:.4f}, "
                 f"Win Rate: {episode_stats['win_rate']:.3f}, "
                 f"Epsilon: {self.agent.exploration.get_epsilon():.3f}"
             )

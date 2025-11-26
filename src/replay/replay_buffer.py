@@ -27,7 +27,7 @@ class ReplayBuffer:
     
     def __init__(self, 
                  capacity: int = 500000,
-                 state_shape: Tuple[int, ...] = (13, 8, 8),
+                 state_shape: Tuple[int, ...] = (15, 8, 8),
                  device: str = 'cpu'):
         """
         Initialize replay buffer

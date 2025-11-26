@@ -14,7 +14,7 @@ from typing import List
 @dataclass
 class ModelConfig:
     """Configuration for Dueling DQN model"""
-    input_channels: int = 13
+    input_channels: int = 15
     conv_channels: List[int] = None
     hidden_size: int = 512
     action_size: int = 4672
@@ -36,8 +36,8 @@ class DuelingDQN(nn.Module):
     - Final Q-values: Q(s,a) = V(s) + A(s,a) - mean(A(s,:))
     """
     
-    def __init__(self, config: ModelConfig = None, input_channels=13, conv_channels=[64, 128, 256], 
-                 hidden_size=512, action_size=4672, kernel_sizes=None):
+    def __init__(self, config: ModelConfig = None, input_channels=15, conv_channels=[64, 128, 256], 
+                 hidden_size=512, action_size=4672, kernel_sizes=None, dropout: float = 0.3):
         """
         Initialize Dueling DQN
         
@@ -57,11 +57,13 @@ class DuelingDQN(nn.Module):
             self.conv_channels = config.conv_channels
             self.hidden_size = config.hidden_size
             self.action_size = config.action_size
+            self.dropout = getattr(config, "dropout", 0.3)
         else:
             self.input_channels = input_channels
             self.conv_channels = conv_channels
             self.hidden_size = hidden_size
             self.action_size = action_size
+            self.dropout = dropout
         
         # Convolutional feature extraction layers
         self.conv_layers = nn.ModuleList()
@@ -83,8 +85,9 @@ class DuelingDQN(nn.Module):
         # Shared dense layer
         self.shared_dense = nn.Sequential(
             nn.Linear(self.flatten_size, self.hidden_size),
+            nn.LayerNorm(self.hidden_size),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.3)
+            nn.Dropout(self.dropout)
         )
         
         # Value stream V(s) - outputs single value

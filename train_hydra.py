@@ -258,6 +258,7 @@ def generate_training_plots(training_history: Dict[str, Any], plots_dir: Path) -
     episode_rewards = training_history.get('episode_rewards', [])
     episode_lengths = training_history.get('episode_lengths', [])
     evaluations = training_history.get('evaluations', [])
+    training_losses = training_history.get('training_losses', [])
     
     if not episode_rewards:
         print("No episode reward data found in training history")
@@ -268,7 +269,7 @@ def generate_training_plots(training_history: Dict[str, Any], plots_dir: Path) -
     avg_rewards = episode_rewards
     win_rates = []
     epsilons = []
-    losses = []
+    losses = training_losses if training_losses else [0.0] * len(episode_rewards)
     
     # Extract evaluation data if available
     for eval_data in evaluations:
@@ -335,13 +336,14 @@ def generate_training_plots(training_history: Dict[str, Any], plots_dir: Path) -
     axes[1, 0].set_ylim(0, 1)
     
     # 4. Training Loss
-    if any(loss > 0 for loss in losses):
-        axes[1, 1].plot(episode_nums, losses, 'red', linewidth=2, alpha=0.8)
+    if losses:
+        loss_arr = np.array(losses, dtype=float)
+        axes[1, 1].plot(episode_nums, loss_arr, 'red', linewidth=2, alpha=0.8)
         axes[1, 1].set_title('Training Loss per Episode', fontweight='bold')
         axes[1, 1].set_xlabel('Episode')
         axes[1, 1].set_ylabel('Loss')
         axes[1, 1].grid(True, alpha=0.3)
-        axes[1, 1].set_yscale('log')  # Log scale for loss
+        axes[1, 1].set_ylim(bottom=0, top=max(loss_arr.max() * 1.2, 1e-3))
     else:
         axes[1, 1].text(0.5, 0.5, 'No Loss Data Available', 
                        horizontalalignment='center', verticalalignment='center',
@@ -371,7 +373,7 @@ def generate_elo_plot(elo_data: Dict[str, Any], plots_dir: Path) -> None:
     try:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
         
-        # ELO vs Stockfish levels
+        # ELO vs Stockfish levels (if detailed data available)
         if 'detailed_results' in elo_data:
             levels = []
             elos = []
@@ -382,7 +384,6 @@ def generate_elo_plot(elo_data: Dict[str, Any], plots_dir: Path) -> None:
                 elos.append(results.get('stockfish_elo', 0))
                 scores.append(results.get('score', 0) * 100)
             
-            # Plot 1: Score vs Stockfish ELO
             ax1.scatter(elos, scores, s=100, alpha=0.7, c=range(len(elos)), cmap='viridis')
             ax1.plot(elos, scores, 'b--', alpha=0.5)
             ax1.set_xlabel('Stockfish ELO')
@@ -390,9 +391,11 @@ def generate_elo_plot(elo_data: Dict[str, Any], plots_dir: Path) -> None:
             ax1.set_title('Agent Performance vs Stockfish Levels')
             ax1.grid(True, alpha=0.3)
             
-            # Add labels for each point
             for i, (elo, score, level) in enumerate(zip(elos, scores, levels)):
                 ax1.annotate(level, (elo, score), xytext=(5, 5), textcoords='offset points', fontsize=8)
+        else:
+            ax1.text(0.5, 0.5, 'No detailed results available', ha='center', va='center')
+            ax1.set_axis_off()
         
         # Plot 2: ELO estimation summary
         estimated_elo = elo_data.get('estimated_elo', 0)
@@ -547,7 +550,9 @@ def main(cfg: DictConfig) -> None:
         # CNN model - use standard agent creation
         cnn_model_config = {
             'conv_channels': list(cfg.model.conv_channels),
-            'hidden_size': cfg.model.hidden_size
+            'hidden_size': cfg.model.hidden_size,
+            'input_channels': cfg.model.get('input_channels', 13),
+            'dropout': cfg.model.get('dropout', 0.3),
         }
         kernel_sizes = getattr(cfg.model, 'kernel_sizes', None)
         if kernel_sizes is not None:
@@ -567,7 +572,10 @@ def main(cfg: DictConfig) -> None:
                 'epsilon_start': cfg.exploration.epsilon_start,
                 'epsilon_end': cfg.exploration.epsilon_end,
                 'epsilon_decay_steps': cfg.exploration.epsilon_decay_steps,
-                'decay_type': cfg.exploration.decay_type
+                'decay_type': cfg.exploration.decay_type,
+                'temperature_start': cfg.exploration.get('temperature_start', 1.0),
+                'temperature_end': cfg.exploration.get('temperature_end', 1.0),
+                'temperature_decay_steps': cfg.exploration.get('temperature_decay_steps', 0),
             },
             device=device
         )
@@ -641,16 +649,15 @@ def main(cfg: DictConfig) -> None:
         
         logger.info("🎯 Starting final evaluation phase...")
         
-        # Final evaluation
-        try:
-            final_results = trainer.evaluate_against_stockfish(50)
-            
-            logger.info("🏆 Final Results:")
+        # Final evaluation (reuse results from training history to avoid duplicate run)
+        final_results = training_history.get('final_evaluation')
+        if final_results:
+            logger.info("🏆 Final Results (from training):")
             logger.info(f"  Win Rate: {final_results['win_rate']:.1%}")
             logger.info(f"  Draw Rate: {final_results['draw_rate']:.1%}")
             logger.info(f"  Loss Rate: {final_results['loss_rate']:.1%}")
-        except Exception as e:
-            logger.error(f"❌ Final evaluation failed: {e}")
+        else:
+            logger.warning("Final evaluation results not found in training history.")
         
         # Generate sample games
         logger.info("🎮 Generating sample games...")

@@ -1,0 +1,11 @@
+# @package _global_
+experiment:
+  name: eq_medium_prio
+  description: "Equivariant/medium model with prioritized replay, longer run"
+  total_games: 5000
+  
+defaults:
+  - override /model: improved_small
+  - override /training: development
+  - override /exploration: balanced
+  - override /agent: prioritized_medium

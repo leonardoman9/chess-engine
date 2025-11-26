@@ -55,7 +55,7 @@ evaluate-elo-full:
 
 # ========= Services =========
 tensorboard:
-	$(DOCKER_COMPOSE) run --rm --service-ports $(SERVICE) tensorboard --logdir=$(if $(LOGDIR),$(LOGDIR),/app/logs) --host=0.0.0.0 --port=6006
+	$(DOCKER_COMPOSE) run --rm --service-ports $(SERVICE) tensorboard --logdir=$(if $(LOGDIR),$(LOGDIR),logs) --host=0.0.0.0 --port=6006
 
 notebook:
 	$(DOCKER_COMPOSE) run --rm --service-ports $(SERVICE) jupyter lab --ip=0.0.0.0 --no-browser --notebook-dir=/app

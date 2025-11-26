@@ -2,7 +2,7 @@
 experiment:
   name: baseline_medium
   description: "Baseline CNN-DQN with medium model for development"
-  total_games: 500
+  total_games: 5000
   
 defaults:
   - override /model: medium

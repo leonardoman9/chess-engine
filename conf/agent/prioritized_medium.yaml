@@ -1,10 +1,10 @@
 # @package _global_
 agent:
-  name: default
+  name: prioritized_medium
   buffer_size: 200000
   min_buffer_size: 1000
   batch_size: 64
-  learning_rate: 2.5e-5
+  learning_rate: 1e-4
   gamma: 0.99
   tau: 0.005
-  replay_type: standard  # standard or prioritized
+  replay_type: prioritized
