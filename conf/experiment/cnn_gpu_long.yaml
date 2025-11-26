@@ -1,8 +1,8 @@
 # @package _global_
 experiment:
   name: cnn_gpu_long
-  description: "CNN large model – long run (10k games) optimized for GPU"
-  total_games: 10000
+  description: "CNN large model – long run (100k games) optimized for GPU"
+  total_games: 100000
 
 defaults:
   - override /model: large

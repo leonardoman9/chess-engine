@@ -90,6 +90,7 @@ class DQNAgent:
         
         # Optimizer
         self.optimizer = optim.AdamW(self.q_network.parameters(), lr=learning_rate, weight_decay=1e-4)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=5000, gamma=0.5)
         
         # Replay buffer
         input_channels = model_config.get("input_channels", 13)
@@ -280,6 +281,8 @@ class DQNAgent:
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=5.0)
         
         self.optimizer.step()
+        if self.scheduler is not None:
+            self.scheduler.step()
         
         # Update priorities if using prioritized replay
         if self.buffer_type == 'prioritized' and indices is not None:

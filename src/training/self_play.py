@@ -156,6 +156,61 @@ class SelfPlayTrainer:
                 chess.QUEEN: 9,
                 chess.KING: 0,
             }
+
+            def compute_positional_reward(board_before: chess.Board, move: chess.Move, player_color: chess.Color) -> float:
+                """Light positional reward: center control, king safety, threats (scaled small)."""
+                reward_pos = 0.0
+                board_after = board_before.copy()
+                board_after.push(move)
+
+                center4 = {chess.D4, chess.E4, chess.D5, chess.E5}
+                center16 = {
+                    chess.C3, chess.C4, chess.C5, chess.C6,
+                    chess.D3, chess.D4, chess.D5, chess.D6,
+                    chess.E3, chess.E4, chess.E5, chess.E6,
+                    chess.F3, chess.F4, chess.F5, chess.F6,
+                }
+
+                to_sq = move.to_square
+                from_sq = move.from_square
+
+                # Occupy center
+                if to_sq in center4:
+                    reward_pos += 0.1
+                elif to_sq in center16:
+                    reward_pos += 0.05
+
+                # Move toward center (Manhattan distance reduction)
+                def center_distance(sq: chess.Square) -> float:
+                    file = chess.square_file(sq)
+                    rank = chess.square_rank(sq)
+                    return abs(file - 3.5) + abs(rank - 3.5)
+
+                dist_before = center_distance(from_sq)
+                dist_after = center_distance(to_sq)
+                reward_pos += max(0.0, dist_before - dist_after) * 0.02
+
+                # Control center (attacks on center squares)
+                attacked_center = sum(
+                    1 for sq in center4 if board_after.is_attacked_by(player_color, sq)
+                )
+                reward_pos += attacked_center * 0.02
+
+                # King safety: castling done
+                king_square = board_after.king(player_color)
+                castle_targets = {chess.G1, chess.C1} if player_color == chess.WHITE else {chess.G8, chess.C8}
+                if king_square in castle_targets:
+                    reward_pos += 0.1
+
+                # Threats: pieces attacked by the moved piece
+                moved_piece = board_after.piece_at(to_sq)
+                if moved_piece and moved_piece.color == player_color:
+                    attacked = board_after.attacks(to_sq)
+                    opponent = chess.BLACK if player_color == chess.WHITE else chess.WHITE
+                    threats = sum(1 for sq in attacked if board_after.piece_at(sq) and board_after.piece_at(sq).color == opponent)
+                    reward_pos += threats * 0.02
+
+                return reward_pos
             material_before = sum(
                 (len(board.pieces(pt, chess.WHITE)) - len(board.pieces(pt, chess.BLACK))) * val
                 for pt, val in piece_values.items()
@@ -177,7 +232,7 @@ class SelfPlayTrainer:
                 if move not in board.legal_moves:
                     # Invalid move - penalize and select random legal move
                     move = random.choice(list(board.legal_moves))
-                    reward = -0.2 * 0.05  # Stronger penalty for invalid moves, scaled
+                    reward = -0.2  # Penalty for invalid moves
                 else:
                     # Base reward for valid move
                     reward = 0.0
@@ -188,13 +243,16 @@ class SelfPlayTrainer:
                         if captured_piece is None and board.is_en_passant(move):
                             captured_piece = chess.Piece(chess.PAWN, not board.turn)
                         if captured_piece:
-                            reward += (0.15 * piece_values.get(captured_piece.piece_type, 0)) * 0.05
+                            reward += 0.18 * piece_values.get(captured_piece.piece_type, 0)
                     if board.gives_check(move):
-                        reward += 0.02 * 0.05
+                        reward += 0.05
+
+                    # Positional/strategic shaping
+                    reward += compute_positional_reward(board, move, board.turn)
             except:
                 # Fallback to random move
                 move = random.choice(list(board.legal_moves))
-                reward = -0.1 * 0.05
+                reward = -0.1
             
             # Make move
             board.push(move)
@@ -225,22 +283,22 @@ class SelfPlayTrainer:
                 if board.is_checkmate():
                     # Strong reward/penalty for wins/losses
                     if board.turn:  # Black wins (white to move but checkmated)
-                        reward = (-20.0 if current_agent == white_agent else 20.0) * 0.05
+                        reward = -20.0 if current_agent == white_agent else 20.0
                     else:  # White wins (black to move but checkmated)
-                        reward = (20.0 if current_agent == white_agent else -20.0) * 0.05
+                        reward = 20.0 if current_agent == white_agent else -20.0
                 elif resign:
                     # Resignation is handled via bonus above; no extra change here
                     reward = 0.0
                 elif board.is_stalemate():
-                    reward = -2.0 * 0.05  # Penalty for stalemate
+                    reward = -2.5  # Penalty for stalemate
                 elif board.is_insufficient_material():
                     reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = -2.0 * 0.05  # Penalty for other draws (repetition, 50-move rule)
+                    reward = -2.5  # Penalty for other draws (repetition, 50-move rule)
             
             # Material delta bonus
             delta_material = material_after - material_before
-            reward += (0.03 * delta_material) * 0.05
+            reward += 0.03 * delta_material
             
             # Store experience (only for the agent we're training)
             if current_agent == self.agent:
@@ -264,7 +322,7 @@ class SelfPlayTrainer:
             termination = 'timeout'
             if experiences:
                 last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                timeout_penalty = -2.0 * 0.05
+                timeout_penalty = -2.5
                 experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
                 game_reward += timeout_penalty
         else:

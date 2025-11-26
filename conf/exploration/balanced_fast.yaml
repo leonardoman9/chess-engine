@@ -3,6 +3,9 @@ exploration:
   name: balanced_fast
   strategy_type: linear
   epsilon_start: 1.0
-  epsilon_end: 0.05
-  epsilon_decay_steps: 50000
+  epsilon_end: 0.1
+  epsilon_decay_steps: 40000
   decay_type: linear
+  temperature_start: 1.1
+  temperature_end: 0.9
+  temperature_decay_steps: 5000
