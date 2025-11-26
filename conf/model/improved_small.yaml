@@ -1,6 +1,7 @@
 # @package _global_
 model:
   name: improved_small
+  input_channels: 15
   conv_channels: [64, 128, 256]  # Più canali per catturare pattern
   hidden_size: 512               # Hidden size maggiore
   dropout: 0.2                   # Dropout maggiore per regolarizzazione

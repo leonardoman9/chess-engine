@@ -296,8 +296,11 @@ class SelfPlayTrainer:
             
             while not board.is_game_over():
                 if (board.turn and agent_is_white) or (not board.turn and not agent_is_white):
-                    # Agent's turn
-                    action = self.agent.select_action(board, deterministic=True)  # No exploration
+                    # Agent's turn (force epsilon=0 for eval, but keep temperature sampling)
+                    old_epsilon = self.agent.exploration.current_epsilon
+                    self.agent.exploration.current_epsilon = 0.0
+                    action = self.agent.select_action(board, deterministic=False)
+                    self.agent.exploration.current_epsilon = old_epsilon
                     try:
                         move = action_to_move(action, board)
                         if move not in board.legal_moves:
@@ -344,8 +347,11 @@ class SelfPlayTrainer:
 
             while not board.is_game_over():
                 if (board.turn and agent_is_white) or (not board.turn and not agent_is_white):
-                    # Agent's turn
-                    action = self.agent.select_action(board, deterministic=True)
+                # Agent's turn (force epsilon=0 for eval, but keep temperature sampling)
+                old_epsilon = self.agent.exploration.current_epsilon
+                self.agent.exploration.current_epsilon = 0.0
+                action = self.agent.select_action(board, deterministic=False)
+                self.agent.exploration.current_epsilon = old_epsilon
                     try:
                         move = action_to_move(action, board)
                         if move not in board.legal_moves:
