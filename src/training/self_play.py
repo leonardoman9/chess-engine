@@ -245,7 +245,7 @@ class SelfPlayTrainer:
                         if captured_piece is None and board.is_en_passant(move):
                             captured_piece = chess.Piece(chess.PAWN, not board.turn)
                         if captured_piece:
-                            reward += 0.12 * piece_values.get(captured_piece.piece_type, 0)
+                            reward += 0.15 * piece_values.get(captured_piece.piece_type, 0)
                     else:
                         captured_piece = None
                     if board.gives_check(move):
@@ -299,20 +299,20 @@ class SelfPlayTrainer:
             # Calculate final reward
             if done or resign:
                 if board.is_checkmate():
-                    # Strong reward/penalty for wins/losses
+                    # Strong reward/penalty for wins/losses (emphasize mate)
                     if board.turn:  # Black wins (white to move but checkmated)
-                        reward = -20.0 if current_agent == white_agent else 20.0
+                        reward = -30.0 if current_agent == white_agent else 30.0
                     else:  # White wins (black to move but checkmated)
-                        reward = 20.0 if current_agent == white_agent else -20.0
+                        reward = 30.0 if current_agent == white_agent else -30.0
                 elif resign:
                     # Resignation is handled via bonus above; no extra change here
                     reward = 0.0
                 elif board.is_stalemate():
-                    reward = -6.0  # Penalty for stalemate
+                    reward = -8.0  # Penalty for stalemate
                 elif board.is_insufficient_material():
                     reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = -6.0  # Penalty for other draws (repetition, 50-move rule)
+                    reward = -8.0  # Penalty for other draws (repetition, 50-move rule)
             
             # Material delta bonus
             delta_material = material_after - material_before
@@ -340,7 +340,7 @@ class SelfPlayTrainer:
             termination = 'timeout'
             if experiences:
                 last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                timeout_penalty = -6.0
+                timeout_penalty = -8.0
                 experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
                 game_reward += timeout_penalty
         else:
