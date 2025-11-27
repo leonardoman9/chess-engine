@@ -1,4 +1,4 @@
-.PHONY: install build shell train-local train-hydra-small train-hydra-medium train-hydra-large train-hydra-gpu train-hydra-custom analyze-training analyze-games evaluate-elo-quick evaluate-elo-full tensorboard notebook clean help
+.PHONY: install build shell train-local train-hydra-small train-hydra-medium train-hydra-large train-hydra-gpu train-hydra-custom train-hydra-cnn-gpu0 analyze-training analyze-games evaluate-elo-quick evaluate-elo-full tensorboard notebook clean help
 
 PYTHON ?= python3
 DOCKER_COMPOSE ?= docker compose
@@ -35,6 +35,9 @@ train-hydra-custom:
 train-hydra-gpu:
 	@if [ -z "$(GPU)" ]; then echo "Usage: make train-hydra-gpu GPU=0 [EXP=baseline_medium] [PARAMS='experiment.total_games=2000']"; exit 1; fi
 	CUDA_VISIBLE_DEVICES=$(GPU) $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.server.yml run --rm $(SERVICE) python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0 $(PARAMS)
+
+train-hydra-cnn-gpu0:
+	$(DOCKER_COMPOSE) run --rm --gpus '"device=0"' $(SERVICE) python train_hydra.py experiment=cnn_gpu_long device=auto
 
 # ========= Analysis & evaluation =========
 analyze-training:
@@ -79,6 +82,7 @@ help:
 	@echo "  make train-hydra-large  Run baseline_large in Docker"
 	@echo "  make train-hydra-custom PARAMS='experiment=baseline_large device=cpu'"
 	@echo "  make train-hydra-gpu GPU=0 [EXP=...] [PARAMS='...']"
+	@echo "  make train-hydra-cnn-gpu0 Run cnn_gpu_long on GPU 0 in Docker"
 	@echo ""
 	@echo "Analysis & Evaluation:"
 	@echo "  make analyze-training RESULTS=results/<run_dir>"
