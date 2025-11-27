@@ -8,8 +8,8 @@ A chess engine built with Deep Q-Networks (DQN) and a convolutional dueling head
 - Method: Self-play RL with reward shaping and Stockfish evaluations
 
 ## Current Status (Nov 2025)
-- **Stable Training**: Fixed Q-value explosion and non-decreasing loss by implementing reward scaling (0.05x) and correcting input channel mismatch (15 vs 13).
-- **Performance**: Training is now stable with Mean Q-values around 0.8-1.0 and Loss around 0.2. Win rate is starting to emerge (~10% after 80 games).
+- **Stability**: Correct 15 input channels, toned-down reward shaping, prioritized replay, and earlier training start (min buffer 5k).
+- **GPU path**: Large CNN (128-256-512, hidden 1024) + batch 256 + PER + max_moves 100, checkpoints every 20k for long runs (100k games).
 - **Pipeline**: Fully functional Dockerized pipeline for CPU/GPU training.
 
 ## Prerequisites
@@ -41,14 +41,14 @@ make train-hydra-large          # 1000 games
 
 **Long Training (Recommended for Results):**
 ```bash
-# 20k games, large model, checkpoints every 7.5k
-make train-hydra-custom PARAMS='experiment=baseline_long_cpu model=large experiment.total_games=20000 training.checkpoint_frequency=7500'
+# 20k games, large model, final checkpoint at 20k
+make train-hydra-custom PARAMS='experiment=baseline_long_cpu model=large experiment.total_games=20000 training.checkpoint_frequency=20000'
 ```
 
 GPU:
 ```bash
-make train-hydra-gpu GPU=0 EXP=baseline_large PARAMS='experiment.total_games=2000'
-make train-hydra-gpu GPU=0 EXP=cnn_gpu_long
+# 100k games, large CNN, PER, batch 256, checkpoints every 20k
+make train-hydra-gpu GPU=0 EXP=cnn_gpu_long PARAMS='training.checkpoint_frequency=20000 agent.min_buffer_size=5000'
 ```
 
 ## Analysis and Monitoring
@@ -66,9 +66,9 @@ make tensorboard                 # reads logs/<run>
 
 ## Suggested Workflow
 1. **Smoke test**: `baseline_small` (200 games) to verify the pipeline.
-2. **Long run**: Use `make train-hydra-custom` with `baseline_long_cpu` (20k games) or `cnn_gpu_long` if you have a GPU.
-3. **Monitor**: Use TensorBoard to watch `mean_q_value` (should be ~0.8-1.2) and `loss` (should be ~0.2).
-4. **Evaluate**: After training, run `analyze_training.py` and `evaluate_elo.py` to measure performance.
+2. **Long run**: `cnn_gpu_long` (100k games, GPU) or `baseline_long_cpu` (20k, CPU).
+3. **Monitor**: TensorBoard; loss in discesa, mean_Q che non esplode (>~3).
+4. **Evaluate**: Dopo ogni checkpoint (20k) con `evaluate_elo.py --quick`; a fine run `analyze_training.py --plots`.
 
 ## Project Structure
 ```
@@ -87,9 +87,11 @@ train_hydra.py  # Main entrypoint
 ```
 
 ## Key Configuration Notes
-- **Reward Scaling**: Rewards are scaled by 0.05 in `self_play.py` to keep Q-values stable.
-- **Input Channels**: The model expects 15 input channels (12 pieces + metadata + attack maps). Ensure `model.input_channels=15` in configs.
-- **Docker**: The Docker image must be rebuilt (`make build`) if you change code in `src/`, as the source is copied into the image (unless using a dev volume mount).
+- **Reward shaping (light)**: catture 0.08×valore, check +0.02, delta materiale 0.01×Δmat, piccoli bonus posizionali (centro/controllo/arrocco/minacce), patta/timeout -4, mate ±20.
+- **Input Channels**: 15 (12 pezzi + meta + attack maps). Verificare `input_channels: 15` nei config.
+- **Replay / PER**: per run grandi: `replay_type=prioritized`, `batch_size=256`, `buffer_size=250k`, `min_buffer_size=5000`.
+- **Long-run training**: `max_moves=100`, `checkpoint_frequency=20000`.
+- **Docker**: Ricostruire l’immagine (`make build` o `docker compose build --no-cache chess-rl`) dopo modifiche a `src/` se non si usa il volume dev.
 
 ## Troubleshooting
 - **Exploding Q-values**: Check if reward scaling is active.

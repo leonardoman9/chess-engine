@@ -137,6 +137,7 @@ class SelfPlayTrainer:
         
         move_count = 0
         game_reward = 0
+        quiet_stretch = 0  # moves without capture/check/pawn push
         
         while not board.is_game_over() and move_count < self.config.max_moves:
             if time.time() - start_time > self.config.game_timeout:
@@ -233,6 +234,7 @@ class SelfPlayTrainer:
                     # Invalid move - penalize and select random legal move
                     move = random.choice(list(board.legal_moves))
                     reward = -0.2  # Penalty for invalid moves
+                    captured_piece = None
                 else:
                     # Base reward for valid move
                     reward = 0.0
@@ -243,7 +245,9 @@ class SelfPlayTrainer:
                         if captured_piece is None and board.is_en_passant(move):
                             captured_piece = chess.Piece(chess.PAWN, not board.turn)
                         if captured_piece:
-                            reward += 0.08 * piece_values.get(captured_piece.piece_type, 0)
+                            reward += 0.12 * piece_values.get(captured_piece.piece_type, 0)
+                    else:
+                        captured_piece = None
                     if board.gives_check(move):
                         reward += 0.02
 
@@ -253,10 +257,24 @@ class SelfPlayTrainer:
                 # Fallback to random move
                 move = random.choice(list(board.legal_moves))
                 reward = -0.1
+                captured_piece = None
             
             # Make move
             board.push(move)
             next_state = board_to_tensor(board)
+
+            # Anti-stall: penalize long quiet stretches and repetitions
+            is_check = board.is_check()
+            moved_piece = board.piece_at(move.to_square)
+            is_pawn_move = moved_piece and moved_piece.piece_type == chess.PAWN
+            if captured_piece or is_check or is_pawn_move:
+                quiet_stretch = 0
+            else:
+                quiet_stretch += 1
+                if quiet_stretch % 15 == 0:
+                    reward -= 0.5
+            if board.can_claim_threefold_repetition():
+                reward -= 1.0
 
             # Check if game is over
             done = board.is_game_over()
@@ -290,11 +308,11 @@ class SelfPlayTrainer:
                     # Resignation is handled via bonus above; no extra change here
                     reward = 0.0
                 elif board.is_stalemate():
-                    reward = -4.0  # Penalty for stalemate
+                    reward = -6.0  # Penalty for stalemate
                 elif board.is_insufficient_material():
                     reward = 0.0  # Neutral for insufficient material
                 else:
-                    reward = -4.0  # Penalty for other draws (repetition, 50-move rule)
+                    reward = -6.0  # Penalty for other draws (repetition, 50-move rule)
             
             # Material delta bonus
             delta_material = material_after - material_before
@@ -322,7 +340,7 @@ class SelfPlayTrainer:
             termination = 'timeout'
             if experiences:
                 last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
-                timeout_penalty = -4.0
+                timeout_penalty = -6.0
                 experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
                 game_reward += timeout_penalty
         else:

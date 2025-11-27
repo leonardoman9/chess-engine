@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 import numpy as np
+import torch
 from datetime import datetime
 
 # Add src to path
@@ -30,7 +31,7 @@ def analyze_training_progress(results_dir: str):
     experiment_info_path = results_path / 'experiment_info.json'
     if not experiment_info_path.exists():
         print("❌ experiment_info.json not found")
-        return
+        return None, None
     
     with open(experiment_info_path) as f:
         experiment_info = json.load(f)
@@ -38,8 +39,8 @@ def analyze_training_progress(results_dir: str):
     # Load training history
     history_path = results_path / 'training_history.json'
     if not history_path.exists():
-        print("❌ training_history.json not found")
-        return
+        print("⚠️  training_history.json not found (maybe run interrupted)")
+        return experiment_info, None
     
     with open(history_path) as f:
         history = json.load(f)
@@ -223,38 +224,55 @@ def generate_sample_games(results_dir: str, checkpoint_name: str = None, num_gam
     """Generate sample games from a checkpoint"""
     results_path = Path(results_dir)
     
-    # Load experiment config
-    with open(results_path / 'experiment_info.json') as f:
-        experiment_info = json.load(f)
+    # Load experiment config (if available)
+    exp_info_path = results_path / 'experiment_info.json'
+    experiment_name = None
+    if exp_info_path.exists():
+        with open(exp_info_path) as f:
+            experiment_info = json.load(f)
+            experiment_name = experiment_info['experiment']['name']
     
     # Determine checkpoint to use
     if checkpoint_name:
-        checkpoint_path = results_path / 'checkpoints' / checkpoint_name
+        cp = Path(checkpoint_name)
+        if cp.exists():
+            checkpoint_path = cp
+        else:
+            checkpoint_path = results_path / 'checkpoints' / checkpoint_name
     else:
-        # Use final model
         checkpoint_path = results_path / 'final_model.pt'
     
     if not checkpoint_path.exists():
         print(f"❌ Checkpoint not found: {checkpoint_path}")
         return
     
-    print(f"\n🎮 Generating {num_games} sample games from: {checkpoint_path.name}")
+    print(f"\n🎮 Generating {num_games} sample games from: {checkpoint_path}")
     
-    # Load agent
-    config = get_experiment_config(experiment_info['experiment']['name'])
-    agent = DQNAgent(
-        model_config=config.model_config,
-        exploration_config=config.exploration_config,
-        device='cpu',
-        **config.agent_config
-    )
-    
-    try:
-        agent.load_checkpoint(str(checkpoint_path))
-        print("✅ Checkpoint loaded successfully")
-    except Exception as e:
-        print(f"❌ Failed to load checkpoint: {e}")
-        return
+    # Load agent: prefer experiment config, otherwise auto-detect via checkpoint
+    agent = None
+    if experiment_name:
+        try:
+            config = get_experiment_config(experiment_name)
+            agent = DQNAgent(
+                model_config=config.model_config,
+                exploration_config=config.exploration_config,
+                device='cpu',
+                **config.agent_config
+            )
+            agent.load_checkpoint(str(checkpoint_path))
+            print("✅ Checkpoint loaded successfully (experiment config)")
+        except Exception as e:
+            print(f"⚠️ Failed with experiment config ({experiment_name}): {e}")
+            agent = None
+    if agent is None:
+        # Fallback: auto-detect model from checkpoint
+        try:
+            from evaluate_elo import load_agent_from_checkpoint
+            agent = load_agent_from_checkpoint(str(checkpoint_path), device=torch.device('cpu'))
+            print("✅ Checkpoint loaded successfully (auto-detected config)")
+        except Exception as e:
+            print(f"❌ Failed to load checkpoint: {e}")
+            return
     
     # Generate games
     games_dir = results_path / 'sample_games'
@@ -351,15 +369,17 @@ def main():
     # Main analysis
     experiment_info, history = analyze_training_progress(args.results_dir)
     
-    # Generate plots
-    if args.plots:
+    # Generate plots (only if history is available)
+    if args.plots and history:
         create_training_plots(args.results_dir)
+    elif args.plots and not history:
+        print("⚠️  Skipping plots: no training_history.json")
     
     # Compare checkpoints
     if args.compare:
         compare_checkpoints(args.results_dir)
     
-    # Generate sample games
+    # Generate sample games (can work without history)
     if args.generate_games:
         generate_sample_games(args.results_dir, args.checkpoint, args.games)
     

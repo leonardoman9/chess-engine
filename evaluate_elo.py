@@ -31,7 +31,7 @@ from datetime import datetime
 sys.path.append(str(Path(__file__).parent / "src"))
 
 from src.agents.dqn_agent import DQNAgent
-from src.models.dueling_dqn import MODEL_CONFIGS
+from src.models.dueling_dqn import MODEL_CONFIGS, ModelConfig
 from src.utils.exploration import EXPLORATION_CONFIGS
 from src.utils.elo_calculator import ELOCalculator, full_elo_evaluation, quick_elo_estimate
 
@@ -79,10 +79,11 @@ def detect_model_config_from_checkpoint(checkpoint_path: str) -> dict:
         
         # Try to match with existing configs
         for config_name, config in MODEL_CONFIGS.items():
-            if (config.conv_channels == conv_channels and 
-                config.hidden_size == hidden_size):
+            cfg_conv = config['conv_channels'] if isinstance(config, dict) else config.conv_channels
+            cfg_hidden = config['hidden_size'] if isinstance(config, dict) else config.hidden_size
+            if (cfg_conv == conv_channels and cfg_hidden == hidden_size):
                 logger.info(f"Detected model config: {config_name}")
-                return config
+                return ModelConfig(**config) if isinstance(config, dict) else config
         
         # If no exact match, create custom config
         logger.info(f"Custom model config detected: conv_channels={conv_channels}, hidden_size={hidden_size}")
@@ -125,11 +126,15 @@ def detect_agent_config_from_checkpoint(checkpoint_path: str) -> dict:
         'tau': 0.005
     }
 
-def load_agent_from_checkpoint(checkpoint_path: str, device: torch.device) -> DQNAgent:
-    """Load agent from checkpoint with automatic config detection"""
+def load_agent_from_checkpoint(checkpoint_path: str, device: torch.device, forced_model: str = None) -> DQNAgent:
+    """Load agent from checkpoint with automatic (or forced) config detection"""
     
-    # Automatically detect configurations from checkpoint
-    model_config = detect_model_config_from_checkpoint(checkpoint_path)
+    # Model config: forced via CLI or auto-detect
+    if forced_model:
+        model_config = MODEL_CONFIGS[forced_model]
+        logger.info(f"Using forced model config: {forced_model}")
+    else:
+        model_config = detect_model_config_from_checkpoint(checkpoint_path)
     agent_config = detect_agent_config_from_checkpoint(checkpoint_path)
     exploration_config = EXPLORATION_CONFIGS['standard']
     
@@ -138,8 +143,21 @@ def load_agent_from_checkpoint(checkpoint_path: str, device: torch.device) -> DQ
                f"hidden_size={getattr(model_config, 'hidden_size', 'unknown')}")
     
     # Create agent with detected parameters
+    # Ensure we pass only supported kwargs to create_dqn_model / DuelingDQN
+    allowed_keys = {"input_channels", "conv_channels", "hidden_size", "action_size", "dropout"}
+    if isinstance(model_config, ModelConfig):
+        model_kwargs = {
+            'input_channels': model_config.input_channels,
+            'conv_channels': model_config.conv_channels,
+            'hidden_size': model_config.hidden_size,
+            'action_size': model_config.action_size,
+            'dropout': model_config.dropout,
+        }
+    else:
+        model_kwargs = {k: v for k, v in dict(model_config).items() if k in allowed_keys}
+
     agent = DQNAgent(
-        model_config=model_config,
+        model_config=model_kwargs,
         buffer_size=agent_config['buffer_size'],
         min_buffer_size=agent_config['min_buffer_size'],
         batch_size=agent_config['batch_size'],
@@ -187,6 +205,8 @@ def main():
                        help="Path to Stockfish executable")
     parser.add_argument("--device", default="auto", 
                        help="Device to use (cuda, cpu, or auto)")
+    parser.add_argument("--model-config", choices=list(MODEL_CONFIGS.keys()),
+                        help="Force a model config (small/medium/large) instead of auto-detect")
     
     args = parser.parse_args()
     
@@ -216,7 +236,7 @@ def main():
     
     # Load or create agent
     if args.checkpoint and Path(args.checkpoint).exists():
-        agent = load_agent_from_checkpoint(args.checkpoint, device)
+        agent = load_agent_from_checkpoint(args.checkpoint, device, args.model_config)
         model_name = Path(args.checkpoint).stem
     else:
         if args.checkpoint:
