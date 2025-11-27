@@ -6,6 +6,7 @@ Main agent class that combines all DQN components: network, replay buffer, explo
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import numpy as np
 import chess
 from typing import Tuple, Optional, Dict, Any
@@ -40,6 +41,7 @@ class DQNAgent:
                  buffer_type: str = 'standard',
                  buffer_size: int = 500000,
                  min_buffer_size: int = 10000,
+                 replay_device: str = 'cpu',
                  
                  # Exploration configuration
                  exploration_config: dict = None,
@@ -97,10 +99,12 @@ class DQNAgent:
         buffer_config = {
             'capacity': buffer_size,
             'state_shape': (input_channels, 8, 8),
-            'device': self.device
+            'action_size': self.action_space.action_size,
+            'device': replay_device
         }
         self.replay_buffer = create_replay_buffer(buffer_type, **buffer_config)
         self.buffer_type = buffer_type
+        self.replay_device = replay_device
         
         # Exploration strategy
         exploration_config = exploration_config or {'strategy_type': 'standard'}
@@ -224,7 +228,9 @@ class DQNAgent:
                 action: int,
                 reward: float, 
                 next_state: torch.Tensor,
-                done: bool):
+                done: bool,
+                state_mask: Optional[torch.Tensor] = None,
+                next_state_mask: Optional[torch.Tensor] = None):
         """
         Store experience in replay buffer
         
@@ -235,7 +241,11 @@ class DQNAgent:
             next_state: Next state tensor
             done: Whether episode ended
         """
-        self.replay_buffer.push(state, action, reward, next_state, done)
+        if state_mask is None:
+            state_mask = torch.zeros(self.action_space.action_size, dtype=torch.bool)
+        if next_state_mask is None:
+            next_state_mask = torch.zeros(self.action_space.action_size, dtype=torch.bool)
+        self.replay_buffer.push(state, action, reward, next_state, done, state_mask, next_state_mask)
     
     def train_step(self) -> Dict[str, float]:
         """
@@ -250,28 +260,43 @@ class DQNAgent:
         # Sample batch from replay buffer
         if self.buffer_type == 'prioritized':
             batch = self.replay_buffer.sample(self.batch_size)
-            states, actions, rewards, next_states, dones, weights, indices = batch
+            (states, actions, rewards, next_states, dones, state_masks, next_state_masks,
+             weights, indices) = batch
         else:
             batch = self.replay_buffer.sample(self.batch_size)
-            states, actions, rewards, next_states, dones = batch
-            weights = torch.ones_like(rewards)
+            states, actions, rewards, next_states, dones, state_masks, next_state_masks = batch
+            weights = torch.ones_like(rewards, device=self.device)
             indices = None
+
+        # Move data to compute device
+        states = states.to(self.device)
+        actions = actions.to(self.device)
+        rewards = rewards.to(self.device)
+        next_states = next_states.to(self.device)
+        dones = dones.to(self.device)
+        state_masks = state_masks.to(self.device)
+        next_state_masks = next_state_masks.to(self.device)
+        weights = weights.to(self.device)
         
-        # Current Q-values
-        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        # Current Q-values (masked)
+        current_q_values = self.q_network(states, state_masks).gather(1, actions.unsqueeze(1)).squeeze(1)
         
-        # Next Q-values from target network
+        # Next Q-values from target network (masked argmax)
         with torch.no_grad():
-            # Double DQN: use main network to select actions, target network to evaluate
-            next_actions = self.q_network(next_states).argmax(1)
-            next_q_values = self.target_network(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
+            next_q_values_eval = self.q_network(next_states, next_state_masks)
+            next_actions = next_q_values_eval.argmax(1)
+            next_q_values = self.target_network(next_states, next_state_masks).gather(
+                1, next_actions.unsqueeze(1)
+            ).squeeze(1)
             
             # Compute target Q-values
             target_q_values = rewards + (self.gamma * next_q_values * ~dones)
         
-        # Compute loss
         td_errors = target_q_values - current_q_values
-        loss = (weights * td_errors.pow(2)).mean()
+        
+        # Compute loss (SmoothL1 with IS weights)
+        td_loss = F.smooth_l1_loss(current_q_values, target_q_values, reduction='none')
+        loss = (weights * td_loss).mean()
         
         # Optimize
         self.optimizer.zero_grad()

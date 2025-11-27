@@ -149,6 +149,7 @@ class SelfPlayTrainer:
             
             # Get current state and material eval before move
             state = board_to_tensor(board)
+            state_mask = self.action_space.get_legal_actions_mask(board)
             piece_values = {
                 chess.PAWN: 1,
                 chess.KNIGHT: 3,
@@ -262,6 +263,7 @@ class SelfPlayTrainer:
             # Make move
             board.push(move)
             next_state = board_to_tensor(board)
+            next_state_mask = self.action_space.get_legal_actions_mask(board)
 
             # Anti-stall: penalize long quiet stretches and repetitions
             is_check = board.is_check()
@@ -291,9 +293,17 @@ class SelfPlayTrainer:
                     resign = True
                     winner_color = chess.WHITE if material_after > 0 else chess.BLACK
                     if experiences:
-                        last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                        last_state, last_action, last_reward, last_next_state, last_done, last_state_mask, last_next_mask = experiences[-1]
                         bonus = 0.0
-                        experiences[-1] = (last_state, last_action, last_reward + bonus, last_next_state, True)
+                        experiences[-1] = (
+                            last_state,
+                            last_action,
+                            last_reward + bonus,
+                            last_next_state,
+                            True,
+                            last_state_mask,
+                            last_next_mask,
+                        )
                         game_reward += bonus
             
             # Calculate final reward
@@ -314,13 +324,14 @@ class SelfPlayTrainer:
                 else:
                     reward = -8.0  # Penalty for other draws (repetition, 50-move rule)
             
-            # Material delta bonus
+            # Material delta bonus (signed by current player perspective)
             delta_material = material_after - material_before
-            reward += 0.01 * delta_material
+            material_sign = 1.0 if current_agent_is_white else -1.0
+            reward += 0.01 * delta_material * material_sign
             
             # Store experience (only for the agent we're training)
             if current_agent == self.agent:
-                experiences.append((state, action, reward, next_state, done))
+                experiences.append((state, action, reward, next_state, done, state_mask, next_state_mask))
                 game_reward += reward
             
             move_count += 1
@@ -339,9 +350,17 @@ class SelfPlayTrainer:
             winner = None
             termination = 'timeout'
             if experiences:
-                last_state, last_action, last_reward, last_next_state, _ = experiences[-1]
+                last_state, last_action, last_reward, last_next_state, last_done, last_state_mask, last_next_mask = experiences[-1]
                 timeout_penalty = -8.0
-                experiences[-1] = (last_state, last_action, last_reward + timeout_penalty, last_next_state, True)
+                experiences[-1] = (
+                    last_state,
+                    last_action,
+                    last_reward + timeout_penalty,
+                    last_next_state,
+                    True,
+                    last_state_mask,
+                    last_next_mask,
+                )
                 game_reward += timeout_penalty
         else:
             winner = None
@@ -375,7 +394,7 @@ class SelfPlayTrainer:
                     # Agent's turn (force epsilon=0 for eval, but keep temperature sampling)
                     old_epsilon = self.agent.exploration.current_epsilon
                     self.agent.exploration.current_epsilon = 0.0
-                    action = self.agent.select_action(board, deterministic=False)
+                    action = self.agent.select_action(board, deterministic=True)
                     self.agent.exploration.current_epsilon = old_epsilon
                     try:
                         move = action_to_move(action, board)
@@ -426,7 +445,7 @@ class SelfPlayTrainer:
                     # Agent's turn (force epsilon=0 for eval, but keep temperature sampling)
                     old_epsilon = self.agent.exploration.current_epsilon
                     self.agent.exploration.current_epsilon = 0.0
-                    action = self.agent.select_action(board, deterministic=False)
+                    action = self.agent.select_action(board, deterministic=True)
                     self.agent.exploration.current_epsilon = old_epsilon
                     try:
                         move = action_to_move(action, board)

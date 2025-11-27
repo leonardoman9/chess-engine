@@ -22,12 +22,14 @@ class Experience(NamedTuple):
 
 class ReplayBuffer:
     """
-    Standard experience replay buffer with circular storage
+    Standard experience replay buffer with circular storage.
+    Stores state/action/reward/next_state/done plus legal action masks to allow masked Q-learning.
     """
     
     def __init__(self, 
                  capacity: int = 500000,
                  state_shape: Tuple[int, ...] = (15, 8, 8),
+                 action_size: int = 4672,
                  device: str = 'cpu'):
         """
         Initialize replay buffer
@@ -35,10 +37,12 @@ class ReplayBuffer:
         Args:
             capacity: Maximum buffer size
             state_shape: Shape of state tensors
+            action_size: Number of possible actions (for masks)
             device: Device to store tensors on
         """
         self.capacity = capacity
         self.state_shape = state_shape
+        self.action_size = action_size
         self.device = device
         
         # Pre-allocate memory for efficiency
@@ -47,6 +51,8 @@ class ReplayBuffer:
         self.rewards = torch.zeros(capacity, dtype=torch.float32, device=device)
         self.next_states = torch.zeros((capacity,) + state_shape, dtype=torch.float32, device=device)
         self.dones = torch.zeros(capacity, dtype=torch.bool, device=device)
+        self.state_masks = torch.zeros((capacity, action_size), dtype=torch.bool, device=device)
+        self.next_state_masks = torch.zeros((capacity, action_size), dtype=torch.bool, device=device)
         
         self.position = 0
         self.size = 0
@@ -56,7 +62,9 @@ class ReplayBuffer:
              action: int, 
              reward: float, 
              next_state: torch.Tensor, 
-             done: bool):
+             done: bool,
+             state_mask: torch.Tensor,
+             next_state_mask: torch.Tensor):
         """
         Add experience to buffer
         
@@ -66,6 +74,8 @@ class ReplayBuffer:
             reward: Reward received
             next_state: Next state
             done: Whether episode ended
+            state_mask: Legal action mask for current state
+            next_state_mask: Legal action mask for next state
         """
         # Store experience at current position
         self.states[self.position] = state.to(self.device)
@@ -73,6 +83,8 @@ class ReplayBuffer:
         self.rewards[self.position] = reward
         self.next_states[self.position] = next_state.to(self.device)
         self.dones[self.position] = done
+        self.state_masks[self.position] = state_mask.to(self.device)
+        self.next_state_masks[self.position] = next_state_mask.to(self.device)
         
         # Update position and size
         self.position = (self.position + 1) % self.capacity
@@ -86,7 +98,7 @@ class ReplayBuffer:
             batch_size: Size of batch to sample
             
         Returns:
-            Tuple of (states, actions, rewards, next_states, dones)
+            Tuple of (states, actions, rewards, next_states, dones, state_masks, next_state_masks)
         """
         if self.size < batch_size:
             raise ValueError(f"Not enough experiences to sample. Have {self.size}, need {batch_size}")
@@ -99,7 +111,9 @@ class ReplayBuffer:
             self.actions[indices],
             self.rewards[indices],
             self.next_states[indices],
-            self.dones[indices]
+            self.dones[indices],
+            self.state_masks[indices],
+            self.next_state_masks[indices]
         )
     
     def __len__(self) -> int:
@@ -123,10 +137,13 @@ class ReplayBuffer:
             'rewards': self.rewards[:self.size].cpu(),
             'next_states': self.next_states[:self.size].cpu(),
             'dones': self.dones[:self.size].cpu(),
+            'state_masks': self.state_masks[:self.size].cpu(),
+            'next_state_masks': self.next_state_masks[:self.size].cpu(),
             'position': self.position,
             'size': self.size,
             'capacity': self.capacity,
-            'state_shape': self.state_shape
+            'state_shape': self.state_shape,
+            'action_size': self.action_size
         }
         torch.save(state, filepath)
     
@@ -136,6 +153,7 @@ class ReplayBuffer:
         
         self.capacity = state['capacity']
         self.state_shape = state['state_shape']
+        self.action_size = state.get('action_size', self.action_size)
         self.position = state['position']
         self.size = state['size']
         
@@ -148,6 +166,8 @@ class ReplayBuffer:
             self.next_states = torch.zeros((self.capacity,) + self.state_shape, 
                                          dtype=torch.float32, device=self.device)
             self.dones = torch.zeros(self.capacity, dtype=torch.bool, device=self.device)
+            self.state_masks = torch.zeros((self.capacity, self.action_size), dtype=torch.bool, device=self.device)
+            self.next_state_masks = torch.zeros((self.capacity, self.action_size), dtype=torch.bool, device=self.device)
         
         # Load data
         self.states[:self.size] = state['states'].to(self.device)
@@ -155,6 +175,9 @@ class ReplayBuffer:
         self.rewards[:self.size] = state['rewards'].to(self.device)
         self.next_states[:self.size] = state['next_states'].to(self.device)
         self.dones[:self.size] = state['dones'].to(self.device)
+        if 'state_masks' in state and 'next_state_masks' in state:
+            self.state_masks[:self.size] = state['state_masks'].to(self.device)
+            self.next_state_masks[:self.size] = state['next_state_masks'].to(self.device)
 
 
 class SumTree:
@@ -261,6 +284,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
              reward: float, 
              next_state: torch.Tensor, 
              done: bool,
+             state_mask: torch.Tensor,
+             next_state_mask: torch.Tensor,
              priority: Optional[float] = None):
         """
         Add experience with priority
@@ -269,7 +294,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             priority: Experience priority (if None, uses max priority)
         """
         # Add to replay buffer
-        super().push(state, action, reward, next_state, done)
+        super().push(state, action, reward, next_state, done, state_mask, next_state_mask)
         
         # Add to sum tree with priority
         if priority is None:
@@ -282,7 +307,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         Sample batch with importance sampling weights
         
         Returns:
-            Tuple of (states, actions, rewards, next_states, dones, weights, indices)
+            Tuple of (states, actions, rewards, next_states, dones, state_masks, next_state_masks, weights, indices)
         """
         if self.size < batch_size:
             raise ValueError(f"Not enough experiences to sample. Have {self.size}, need {batch_size}")
@@ -319,6 +344,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             self.rewards[indices],
             self.next_states[indices],
             self.dones[indices],
+            self.state_masks[indices],
+            self.next_state_masks[indices],
             weights,
             indices
         )
@@ -415,12 +442,14 @@ if __name__ == "__main__":
     # Add some experiences
     for i in range(100):
         state = torch.randn(13, 8, 8)
+        state_mask = torch.zeros(4672, dtype=torch.bool)
         action = i % 64
         reward = np.random.randn()
         next_state = torch.randn(13, 8, 8)
+        next_state_mask = torch.zeros(4672, dtype=torch.bool)
         done = i % 20 == 0
         
-        buffer.push(state, action, reward, next_state, done)
+        buffer.push(state, action, reward, next_state, done, state_mask, next_state_mask)
     
     print(f"Buffer size: {len(buffer)}")
     
@@ -435,15 +464,17 @@ if __name__ == "__main__":
     
     for i in range(100):
         state = torch.randn(13, 8, 8)
+        state_mask = torch.zeros(4672, dtype=torch.bool)
         action = i % 64
         reward = np.random.randn()
         next_state = torch.randn(13, 8, 8)
+        next_state_mask = torch.zeros(4672, dtype=torch.bool)
         done = i % 20 == 0
         
-        pri_buffer.push(state, action, reward, next_state, done)
+        pri_buffer.push(state, action, reward, next_state, done, state_mask, next_state_mask)
     
     if pri_buffer.is_ready(32):
         batch = pri_buffer.sample(32)
         print(f"Prioritized batch length: {len(batch)}")
-        print(f"Weights shape: {batch[5].shape}")
-        print(f"Indices shape: {batch[6].shape}")
+        print(f"Weights shape: {batch[7].shape}")
+        print(f"Indices shape: {batch[8].shape}")
