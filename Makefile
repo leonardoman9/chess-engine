@@ -37,7 +37,7 @@ train-hydra-gpu:
 	CUDA_VISIBLE_DEVICES=$(GPU) $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.server.yml run --rm $(SERVICE) python train_hydra.py $(if $(EXP),experiment=$(EXP),) device=cuda:0 $(PARAMS)
 
 train-hydra-cnn-gpu0:
-	$(DOCKER_COMPOSE) run --rm --gpus '"device=0"' $(SERVICE) python train_hydra.py experiment=cnn_gpu_long device=auto
+	CUDA_VISIBLE_DEVICES=0 $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.server.yml run --rm $(SERVICE) python train_hydra.py experiment=cnn_gpu_long device=auto
 
 # ========= Analysis & evaluation =========
 analyze-training:
